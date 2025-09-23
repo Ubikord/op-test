@@ -1,0 +1,15 @@
+{
+    "python.defaultInterpreterPath": "${C:\\orange-pi-network-test}\\venv\\Scripts\\python.exe",
+    "python.linting.enabled": true,
+    "python.linting.flake8Enabled": true,
+    "python.formatting.provider": "black",
+    "python.testing.pytestEnabled": true,
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true,
+        "venv": true
+    },
+    "search.exclude": {
+        "**/venv": true
+    }
+}

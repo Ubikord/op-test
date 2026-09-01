@@ -1,5 +1,5 @@
-#!/bin/bash
-# install_slave.sh - Установка на Orange Pi R2S
+#!/bin/sh
+# install_slave.sh - Установка OP-Test Slave на Orange Pi R2S
 # Использование: ./install_slave.sh <номер_устройства>
 # Пример: ./install_slave.sh 1
 
@@ -33,7 +33,7 @@ if [ ! -f "/etc/openwrt_version" ]; then
 fi
 
 # Проверка номера устройства
-if ! [[ "$DEVICE_NUMBER" =~ ^[0-9]+$ ]]; then
+if ! echo "$DEVICE_NUMBER" | grep -qE '^[0-9]+$'; then
     echo -e "${RED}❌ Номер устройства должен быть числом${NC}"
     exit 1
 fi
@@ -44,7 +44,7 @@ echo ""
 # ============================================================
 # ШАГ 1: Настройка SSH
 # ============================================================
-echo -e "${BLUE}[1/9] Настройка SSH...${NC}"
+echo -e "${BLUE}[1/7] Настройка SSH...${NC}"
 
 uci set dropbear.@dropbear[0].RootLogin='1'
 uci set dropbear.@dropbear[0].PasswordAuth='0'
@@ -66,47 +66,41 @@ fi
 # ============================================================
 # ШАГ 2: Сохранение номера устройства
 # ============================================================
-echo -e "${BLUE}[2/9] Сохранение номера устройства...${NC}"
+echo -e "${BLUE}[2/7] Сохранение номера устройства...${NC}"
 echo "$DEVICE_NUMBER" > /etc/device_number
 echo "$DEVICE_NUMBER" > /root/device_number
 echo -e "${GREEN}✅ Номер устройства сохранен: ${DEVICE_NUMBER}${NC}"
 
 # ============================================================
-# ШАГ 3: Настройка сети
+# ШАГ 3: Настройка сети (ПРАВИЛЬНАЯ)
 # ============================================================
-echo -e "${BLUE}[3/9] Настройка сети...${NC}"
+echo -e "${BLUE}[3/7] Настройка сети...${NC}"
 
-# Формируем IP адреса
-ETH0_IP="10.0.0.${DEVICE_NUMBER}1"
-ETH2_IP="10.0.0.${DEVICE_NUMBER}2"
-ETH3_IP="10.0.0.${DEVICE_NUMBER}3"
-ETH1_IP="192.168.2.${DEVICE_NUMBER}"
-
-# Настройка eth0 - тестовый интерфейс
+# eth0 - УПРАВЛЯЮЩИЙ интерфейс (192.168.2.x)
 uci set network.eth0=interface
 uci set network.eth0.proto='static'
-uci set network.eth0.ipaddr="${ETH0_IP}"
+uci set network.eth0.ipaddr="192.168.2.${DEVICE_NUMBER}"
 uci set network.eth0.netmask='255.255.255.0'
 uci set network.eth0.device='eth0'
 
-# Настройка eth1 - управляющий интерфейс (для master)
+# eth1 - ТЕСТОВЫЙ интерфейс (10.0.0.x)
 uci set network.eth1=interface
 uci set network.eth1.proto='static'
-uci set network.eth1.ipaddr="${ETH1_IP}"
+uci set network.eth1.ipaddr="10.0.0.${DEVICE_NUMBER}1"
 uci set network.eth1.netmask='255.255.255.0'
 uci set network.eth1.device='eth1'
 
-# Настройка eth2 - тестовый интерфейс
+# eth2 - ТЕСТОВЫЙ интерфейс
 uci set network.eth2=interface
 uci set network.eth2.proto='static'
-uci set network.eth2.ipaddr="${ETH2_IP}"
+uci set network.eth2.ipaddr="10.0.0.${DEVICE_NUMBER}2"
 uci set network.eth2.netmask='255.255.255.0'
 uci set network.eth2.device='eth2'
 
-# Настройка eth3 - тестовый интерфейс
+# eth3 - ТЕСТОВЫЙ интерфейс
 uci set network.eth3=interface
 uci set network.eth3.proto='static'
-uci set network.eth3.ipaddr="${ETH3_IP}"
+uci set network.eth3.ipaddr="10.0.0.${DEVICE_NUMBER}3"
 uci set network.eth3.netmask='255.255.255.0'
 uci set network.eth3.device='eth3'
 
@@ -114,47 +108,74 @@ uci commit network
 /etc/init.d/network restart
 
 echo -e "${GREEN}✅ Сеть настроена:${NC}"
-echo -e "   eth0: ${ETH0_IP} (тестовый)"
-echo -e "   eth1: ${ETH1_IP} (управление)"
-echo -e "   eth2: ${ETH2_IP} (тестовый)"
-echo -e "   eth3: ${ETH3_IP} (тестовый)"
+echo -e "   eth0: 192.168.2.${DEVICE_NUMBER} (УПРАВЛЕНИЕ)"
+echo -e "   eth1: 10.0.0.${DEVICE_NUMBER}1 (ТЕСТОВЫЙ)"
+echo -e "   eth2: 10.0.0.${DEVICE_NUMBER}2 (ТЕСТОВЫЙ)"
+echo -e "   eth3: 10.0.0.${DEVICE_NUMBER}3 (ТЕСТОВЫЙ)"
 
 # ============================================================
-# ШАГ 4: Установка Python и зависимостей
+# ШАГ 4: Установка Python и зависимостей (если есть интернет)
 # ============================================================
-echo -e "${BLUE}[4/9] Установка Python и зависимостей...${NC}"
+echo -e "${BLUE}[4/7] Установка Python и зависимостей...${NC}"
 
-opkg update
-opkg install python3 python3-pip gcc git
-
-echo -e "${GREEN}✅ Python и зависимости установлены${NC}"
-
-# ============================================================
-# ШАГ 5: Клонирование кода
-# ============================================================
-echo -e "${BLUE}[5/9] Клонирование кода...${NC}"
-
-cd /root
-if [ -d "op-test" ]; then
-    echo -e "${YELLOW}⚠️ Директория op-test уже существует, обновление...${NC}"
-    cd op-test
-    git pull origin main
+# Проверка интернета
+if ping -c 1 8.8.8.8 >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ Интернет доступен${NC}"
+    
+    # Исправление SSL ошибок
+    if ! grep -q "check_signature 0" /etc/opkg.conf; then
+        echo "option check_signature 0" >> /etc/opkg.conf
+        echo "option force_ssl 0" >> /etc/opkg.conf
+    fi
+    
+    # Обновление списков
+    opkg update || echo -e "${YELLOW}⚠️ opkg update не удался${NC}"
+    
+    # Установка пакетов
+    opkg install python3 python3-pip gcc git git-http 2>/dev/null || echo -e "${YELLOW}⚠️ Некоторые пакеты не установлены${NC}"
 else
-    git clone <ваш_репозиторий> op-test
-    cd op-test
+    echo -e "${YELLOW}⚠️ Интернет недоступен, пропускаем установку пакетов${NC}"
 fi
 
-echo -e "${GREEN}✅ Код склонирован${NC}"
+# ============================================================
+# ШАГ 5: Копирование кода
+# ============================================================
+echo -e "${BLUE}[5/7] Копирование кода...${NC}"
+
+cd /root
+
+# Если код уже есть в op-test-main
+if [ -d "op-test/op-test-main" ]; then
+    cd op-test/op-test-main
+    # Копируем в правильное место
+    cd /root
+    mkdir -p op-test
+    cp -r op-test/op-test-main/* op-test/
+    cp -r op-test/op-test-main/isntall op-test/install 2>/dev/null || true
+fi
+
+# Если код уже есть в op-test
+if [ -d "op-test" ] && [ -f "op-test/run_gui.py" ]; then
+    echo -e "${GREEN}✅ Код уже в /root/op-test${NC}"
+else
+    echo -e "${YELLOW}⚠️ Код не найден, создаем базовую структуру...${NC}"
+    mkdir -p /root/op-test/src/slave
+    mkdir -p /root/op-test/src/common
+    mkdir -p /root/op-test/config
+fi
+
+cd /root/op-test
 
 # ============================================================
 # ШАГ 6: Создание конфига
 # ============================================================
-echo -e "${BLUE}[6/9] Создание конфига...${NC}"
+echo -e "${BLUE}[6/7] Создание конфига...${NC}"
 
 cat > config.json << EOF
 {
     "interfaces": [
         {"iface": "eth0", "mac": "$(cat /sys/class/net/eth0/address 2>/dev/null || echo 'unknown')"},
+        {"iface": "eth1", "mac": "$(cat /sys/class/net/eth1/address 2>/dev/null || echo 'unknown')"},
         {"iface": "eth2", "mac": "$(cat /sys/class/net/eth2/address 2>/dev/null || echo 'unknown')"},
         {"iface": "eth3", "mac": "$(cat /sys/class/net/eth3/address 2>/dev/null || echo 'unknown')"}
     ]
@@ -164,64 +185,21 @@ EOF
 echo -e "${GREEN}✅ Конфиг создан${NC}"
 
 # ============================================================
-# ШАГ 7: Компиляция pktgen
+# ШАГ 7: Компиляция pktgen (если есть исходники)
 # ============================================================
-echo -e "${BLUE}[7/9] Компиляция pktgen...${NC}"
+echo -e "${BLUE}[7/7] Компиляция pktgen...${NC}"
 
-gcc -O2 -Wall -o pktgen src/slave/pktgen.c -lm
-chmod +x pktgen
-
-echo -e "${GREEN}✅ pktgen скомпилирован${NC}"
-
-# ============================================================
-# ШАГ 8: Настройка sysctl для производительности
-# ============================================================
-echo -e "${BLUE}[8/9] Настройка производительности сети...${NC}"
-
-cat >> /etc/sysctl.conf << EOF
-
-# OP-Test performance settings
-net.core.rmem_max = 134217728
-net.core.wmem_max = 134217728
-net.core.rmem_default = 65536
-net.core.wmem_default = 65536
-net.ipv4.tcp_rmem = 4096 87380 134217728
-net.ipv4.tcp_wmem = 4096 65536 134217728
-EOF
-
-sysctl -p
-
-echo -e "${GREEN}✅ Настройки производительности применены${NC}"
-
-# ============================================================
-# ШАГ 9: Создание и запуск сервиса
-# ============================================================
-echo -e "${BLUE}[9/9] Настройка сервиса...${NC}"
-
-cat > /etc/systemd/system/pktgen-agent.service << EOF
-[Unit]
-Description=Pktgen Agent
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/root/op-test
-ExecStart=/usr/bin/python3 /root/op-test/src/slave/agent.py --config /root/op-test/config.json --pktgen /root/op-test/pktgen --host 0.0.0.0 --port 5959
-Restart=always
-RestartSec=10
-StandardOutput=append:/var/log/pktgen-agent.log
-StandardError=append:/var/log/pktgen-agent.log
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable pktgen-agent
-systemctl start pktgen-agent
-
-echo -e "${GREEN}✅ Сервис запущен${NC}"
+if [ -f "src/slave/pktgen.c" ]; then
+    if command -v gcc >/dev/null 2>&1; then
+        gcc -O2 -Wall -o pktgen src/slave/pktgen.c -lm 2>/dev/null
+        chmod +x pktgen 2>/dev/null || true
+        echo -e "${GREEN}✅ pktgen скомпилирован${NC}"
+    else
+        echo -e "${YELLOW}⚠️ gcc не найден, pktgen не скомпилирован${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠️ src/slave/pktgen.c не найден${NC}"
+fi
 
 # ============================================================
 # ЗАВЕРШЕНИЕ
@@ -233,11 +211,11 @@ echo -e "${GREEN}========================================${NC}"
 echo ""
 echo -e "${BLUE}Информация о устройстве:${NC}"
 echo -e "   Номер: ${DEVICE_NUMBER}"
-echo -e "   Управляющий IP: ${ETH1_IP}"
-echo -e "   Тестовые IP: ${ETH0_IP}, ${ETH2_IP}, ${ETH3_IP}"
+echo -e "   Управляющий IP: 192.168.2.${DEVICE_NUMBER}"
+echo -e "   Тестовые IP: 10.0.0.${DEVICE_NUMBER}1, 10.0.0.${DEVICE_NUMBER}2, 10.0.0.${DEVICE_NUMBER}3"
 echo ""
-echo -e "${BLUE}Проверка статуса:${NC}"
-echo -e "   systemctl status pktgen-agent"
-echo -e "   tail -f /var/log/pktgen-agent.log"
+echo -e "${BLUE}Для подключения с master:${NC}"
+echo -e "   ssh root@192.168.2.${DEVICE_NUMBER}"
 echo ""
-echo -e "${YELLOW}⚠️ Добавьте публичный ключ SSH на этот R2S для доступа с master${NC}"
+echo -e "${YELLOW}⚠️ Добавьте публичный ключ SSH с master:${NC}"
+echo -e "   ssh-copy-id root@192.168.2.${DEVICE_NUMBER}"

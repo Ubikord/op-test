@@ -1,0 +1,1099 @@
+[
+  {
+    "auto_rate_iterations": 4,
+    "auto_rate_pps": 100000,
+    "common_vlan": 1,
+    "dst_type": 1,
+    "group_name": "05",
+    "incomplete": false,
+    "is_stopped": false,
+    "nic_issue_detected": false,
+    "rate_pps": 500,
+    "receiver": {
+      "bytes_received": 2859520,
+      "duration_s": 6.008,
+      "iface": "eth0",
+      "loss_pct": 0.0,
+      "nic_stats": {
+        "rx_align_errors": 0,
+        "rx_bytes": 5942784,
+        "rx_crc_errors": 0,
+        "rx_dropped": 0,
+        "rx_errors": 0,
+        "rx_fifo_errors": 0,
+        "rx_frame_errors": 0,
+        "rx_jabber": 0,
+        "rx_mac_missed": 0,
+        "rx_over_errors": 0,
+        "rx_oversize": 0,
+        "rx_packets": 11601,
+        "rx_undersize": 0
+      },
+      "out_of_order": 0,
+      "packets_expected": 0,
+      "packets_lost": 0,
+      "packets_received": 5585,
+      "slave": "r2s_1",
+      "trailing_loss_detected": false
+    },
+    "receiver_nic_stats": {
+      "rx_align_errors": 0,
+      "rx_bytes": 5942784,
+      "rx_crc_errors": 0,
+      "rx_dropped": 0,
+      "rx_errors": 0,
+      "rx_fifo_errors": 0,
+      "rx_frame_errors": 0,
+      "rx_jabber": 0,
+      "rx_mac_missed": 0,
+      "rx_over_errors": 0,
+      "rx_oversize": 0,
+      "rx_packets": 11601,
+      "rx_undersize": 0
+    },
+    "sender": {
+      "bytes_sent": 2859520,
+      "duration_s": 5.0,
+      "iface": "eth0",
+      "mac": "c0:74:2b:fa:19:98",
+      "nic_stats": {},
+      "packets_sent": 5585,
+      "slave": "r2s_1"
+    },
+    "sender_stats": [
+      {
+        "bytes_received": 1664716,
+        "mac": "c0:74:2b:fa:19:9a",
+        "out_of_order": 0,
+        "packets_expected": 3277,
+        "packets_lost": 0,
+        "packets_received": 3277
+      },
+      {
+        "bytes_received": 1172464,
+        "mac": "c0:74:2b:fa:19:9b",
+        "out_of_order": 0,
+        "packets_expected": 2308,
+        "packets_lost": 0,
+        "packets_received": 2308
+      }
+    ],
+    "sender_tx_stats": {
+      "c0:74:2b:fa:19:9a": {
+        "tx_aborted": 0,
+        "tx_bytes": 1124352,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 2196,
+        "tx_underrun": 0
+      },
+      "c0:74:2b:fa:19:9b": {
+        "tx_aborted": 0,
+        "tx_bytes": 699392,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 1366,
+        "tx_underrun": 0
+      }
+    },
+    "test_id": "30ae80ab",
+    "test_index": 1,
+    "total_tests": 11
+  },
+  {
+    "auto_rate_iterations": 4,
+    "auto_rate_pps": 100000,
+    "common_vlan": 1,
+    "dst_type": 1,
+    "group_name": "05",
+    "incomplete": false,
+    "is_stopped": false,
+    "nic_issue_detected": false,
+    "rate_pps": 500,
+    "receiver": {
+      "bytes_received": 57488896,
+      "duration_s": 6.056,
+      "iface": "eth2",
+      "loss_pct": 7.379422415428652,
+      "nic_stats": {
+        "rx_align_errors": 0,
+        "rx_bytes": 57488896,
+        "rx_crc_errors": 0,
+        "rx_dropped": 0,
+        "rx_errors": 0,
+        "rx_fifo_errors": 0,
+        "rx_frame_errors": 0,
+        "rx_jabber": 0,
+        "rx_mac_missed": 0,
+        "rx_over_errors": 0,
+        "rx_oversize": 0,
+        "rx_packets": 112283,
+        "rx_undersize": 0
+      },
+      "out_of_order": 0,
+      "packets_expected": 0,
+      "packets_lost": 8946,
+      "packets_received": 112283,
+      "slave": "r2s_1",
+      "trailing_loss_detected": false
+    },
+    "receiver_nic_stats": {
+      "rx_align_errors": 0,
+      "rx_bytes": 57488896,
+      "rx_crc_errors": 0,
+      "rx_dropped": 0,
+      "rx_errors": 0,
+      "rx_fifo_errors": 0,
+      "rx_frame_errors": 0,
+      "rx_jabber": 0,
+      "rx_mac_missed": 0,
+      "rx_over_errors": 0,
+      "rx_oversize": 0,
+      "rx_packets": 112283,
+      "rx_undersize": 0
+    },
+    "sender": {
+      "bytes_sent": 62069248,
+      "duration_s": 5.0,
+      "iface": "eth2",
+      "mac": "c0:74:2b:fa:19:9a",
+      "nic_stats": {},
+      "packets_sent": 121229,
+      "slave": "r2s_1"
+    },
+    "sender_stats": [
+      {
+        "bytes_received": 55867300,
+        "mac": "c0:74:2b:fa:19:98",
+        "out_of_order": 0,
+        "packets_expected": 118921,
+        "packets_lost": 8946,
+        "packets_received": 109975
+      },
+      {
+        "bytes_received": 1172464,
+        "mac": "c0:74:2b:fa:19:9b",
+        "out_of_order": 0,
+        "packets_expected": 2308,
+        "packets_lost": 0,
+        "packets_received": 2308
+      }
+    ],
+    "sender_tx_stats": {
+      "c0:74:2b:fa:19:98": {
+        "tx_aborted": 0,
+        "tx_bytes": 60460544,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 118082,
+        "tx_underrun": 0
+      },
+      "c0:74:2b:fa:19:9b": {
+        "tx_aborted": 0,
+        "tx_bytes": 699392,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 1366,
+        "tx_underrun": 0
+      }
+    },
+    "test_id": "30ae80ab",
+    "test_index": 2,
+    "total_tests": 11
+  },
+  {
+    "auto_rate_iterations": 4,
+    "auto_rate_pps": 100000,
+    "common_vlan": 1,
+    "dst_type": 1,
+    "group_name": "05",
+    "incomplete": false,
+    "is_stopped": false,
+    "nic_issue_detected": false,
+    "rate_pps": 500,
+    "receiver": {
+      "bytes_received": 57369088,
+      "duration_s": 6.052,
+      "iface": "eth3",
+      "loss_pct": 8.305373246697982,
+      "nic_stats": {
+        "rx_align_errors": 0,
+        "rx_bytes": 57369088,
+        "rx_crc_errors": 0,
+        "rx_dropped": 0,
+        "rx_errors": 0,
+        "rx_fifo_errors": 0,
+        "rx_frame_errors": 0,
+        "rx_jabber": 0,
+        "rx_mac_missed": 0,
+        "rx_over_errors": 0,
+        "rx_oversize": 0,
+        "rx_packets": 112049,
+        "rx_undersize": 0
+      },
+      "out_of_order": 0,
+      "packets_expected": 0,
+      "packets_lost": 10149,
+      "packets_received": 112049,
+      "slave": "r2s_1",
+      "trailing_loss_detected": false
+    },
+    "receiver_nic_stats": {
+      "rx_align_errors": 0,
+      "rx_bytes": 57369088,
+      "rx_crc_errors": 0,
+      "rx_dropped": 0,
+      "rx_errors": 0,
+      "rx_fifo_errors": 0,
+      "rx_frame_errors": 0,
+      "rx_jabber": 0,
+      "rx_mac_missed": 0,
+      "rx_over_errors": 0,
+      "rx_oversize": 0,
+      "rx_packets": 112049,
+      "rx_undersize": 0
+    },
+    "sender": {
+      "bytes_sent": 62565376,
+      "duration_s": 5.0,
+      "iface": "eth3",
+      "mac": "c0:74:2b:fa:19:9b",
+      "nic_stats": {},
+      "packets_sent": 122198,
+      "slave": "r2s_1"
+    },
+    "sender_stats": [
+      {
+        "bytes_received": 55256176,
+        "mac": "c0:74:2b:fa:19:98",
+        "out_of_order": 0,
+        "packets_expected": 118921,
+        "packets_lost": 10149,
+        "packets_received": 108772
+      },
+      {
+        "bytes_received": 1664716,
+        "mac": "c0:74:2b:fa:19:9a",
+        "out_of_order": 0,
+        "packets_expected": 3277,
+        "packets_lost": 0,
+        "packets_received": 3277
+      }
+    ],
+    "sender_tx_stats": {
+      "c0:74:2b:fa:19:98": {
+        "tx_aborted": 0,
+        "tx_bytes": 60460544,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 118082,
+        "tx_underrun": 0
+      },
+      "c0:74:2b:fa:19:9a": {
+        "tx_aborted": 0,
+        "tx_bytes": 1124352,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 2196,
+        "tx_underrun": 0
+      }
+    },
+    "test_id": "30ae80ab",
+    "test_index": 3,
+    "total_tests": 11
+  },
+  {
+    "auto_rate_iterations": 4,
+    "auto_rate_pps": 100000,
+    "common_vlan": 2,
+    "dst_type": 1,
+    "group_name": "05",
+    "incomplete": false,
+    "is_stopped": false,
+    "nic_issue_detected": false,
+    "rate_pps": 500,
+    "receiver": {
+      "bytes_received": 1601536,
+      "duration_s": 6.076,
+      "iface": "eth0",
+      "loss_pct": 97.4189289545342,
+      "nic_stats": {
+        "rx_align_errors": 0,
+        "rx_bytes": 6249472,
+        "rx_crc_errors": 0,
+        "rx_dropped": 0,
+        "rx_errors": 0,
+        "rx_fifo_errors": 0,
+        "rx_frame_errors": 0,
+        "rx_jabber": 0,
+        "rx_mac_missed": 0,
+        "rx_over_errors": 0,
+        "rx_oversize": 0,
+        "rx_packets": 12205,
+        "rx_undersize": 0
+      },
+      "out_of_order": 0,
+      "packets_expected": 0,
+      "packets_lost": 118062,
+      "packets_received": 3128,
+      "slave": "r2s_1",
+      "trailing_loss_detected": true
+    },
+    "receiver_nic_stats": {
+      "rx_align_errors": 0,
+      "rx_bytes": 6249472,
+      "rx_crc_errors": 0,
+      "rx_dropped": 0,
+      "rx_errors": 0,
+      "rx_fifo_errors": 0,
+      "rx_frame_errors": 0,
+      "rx_jabber": 0,
+      "rx_mac_missed": 0,
+      "rx_over_errors": 0,
+      "rx_oversize": 0,
+      "rx_packets": 12205,
+      "rx_undersize": 0
+    },
+    "sender": {
+      "bytes_sent": 62055376,
+      "duration_s": 5.0,
+      "iface": "eth0",
+      "mac": "c0:74:2b:fa:19:98",
+      "nic_stats": {},
+      "packets_sent": 121190,
+      "slave": "r2s_1"
+    },
+    "sender_stats": [
+      {
+        "bytes_received": 506476,
+        "mac": "c0:74:2b:fa:14:98",
+        "out_of_order": 0,
+        "packets_expected": 119059,
+        "packets_lost": 118062,
+        "packets_received": 997
+      },
+      {
+        "bytes_received": 1082548,
+        "mac": "c0:74:2b:fa:14:9a",
+        "out_of_order": 0,
+        "packets_expected": 2131,
+        "packets_lost": 0,
+        "packets_received": 2131
+      }
+    ],
+    "sender_tx_stats": {
+      "c0:74:2b:fa:14:98": {
+        "tx_aborted": 0,
+        "tx_bytes": 60487680,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 118135,
+        "tx_underrun": 0
+      },
+      "c0:74:2b:fa:14:9a": {
+        "tx_aborted": 0,
+        "tx_bytes": 605696,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 1183,
+        "tx_underrun": 0
+      }
+    },
+    "test_id": "30ae80ab",
+    "test_index": 4,
+    "total_tests": 11
+  },
+  {
+    "auto_rate_iterations": 4,
+    "auto_rate_pps": 100000,
+    "common_vlan": 2,
+    "dst_type": 1,
+    "group_name": "05",
+    "incomplete": false,
+    "is_stopped": false,
+    "nic_issue_detected": false,
+    "rate_pps": 500,
+    "receiver": {
+      "bytes_received": 51550720,
+      "duration_s": 6.108,
+      "iface": "eth0",
+      "loss_pct": 16.825000826091266,
+      "nic_stats": {
+        "rx_align_errors": 0,
+        "rx_bytes": 51550720,
+        "rx_crc_errors": 0,
+        "rx_dropped": 0,
+        "rx_errors": 0,
+        "rx_fifo_errors": 0,
+        "rx_frame_errors": 0,
+        "rx_jabber": 0,
+        "rx_mac_missed": 0,
+        "rx_over_errors": 0,
+        "rx_oversize": 0,
+        "rx_packets": 100685,
+        "rx_undersize": 0
+      },
+      "out_of_order": 0,
+      "packets_expected": 0,
+      "packets_lost": 20367,
+      "packets_received": 100685,
+      "slave": "r2s_2",
+      "trailing_loss_detected": false
+    },
+    "receiver_nic_stats": {
+      "rx_align_errors": 0,
+      "rx_bytes": 51550720,
+      "rx_crc_errors": 0,
+      "rx_dropped": 0,
+      "rx_errors": 0,
+      "rx_fifo_errors": 0,
+      "rx_frame_errors": 0,
+      "rx_jabber": 0,
+      "rx_mac_missed": 0,
+      "rx_over_errors": 0,
+      "rx_oversize": 0,
+      "rx_packets": 100685,
+      "rx_undersize": 0
+    },
+    "sender": {
+      "bytes_sent": 61978624,
+      "duration_s": 5.0,
+      "iface": "eth0",
+      "mac": "c0:74:2b:fa:14:98",
+      "nic_stats": {},
+      "packets_sent": 121052,
+      "slave": "r2s_2"
+    },
+    "sender_stats": [
+      {
+        "bytes_received": 50065432,
+        "mac": "c0:74:2b:fa:19:98",
+        "out_of_order": 0,
+        "packets_expected": 118921,
+        "packets_lost": 20367,
+        "packets_received": 98554
+      },
+      {
+        "bytes_received": 1082548,
+        "mac": "c0:74:2b:fa:14:9a",
+        "out_of_order": 0,
+        "packets_expected": 2131,
+        "packets_lost": 0,
+        "packets_received": 2131
+      }
+    ],
+    "sender_tx_stats": {
+      "c0:74:2b:fa:14:9a": {
+        "tx_aborted": 0,
+        "tx_bytes": 605696,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 1183,
+        "tx_underrun": 0
+      },
+      "c0:74:2b:fa:19:98": {
+        "tx_aborted": 0,
+        "tx_bytes": 60460544,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 118082,
+        "tx_underrun": 0
+      }
+    },
+    "test_id": "30ae80ab",
+    "test_index": 5,
+    "total_tests": 11
+  },
+  {
+    "auto_rate_iterations": 4,
+    "auto_rate_pps": 100000,
+    "common_vlan": 2,
+    "dst_type": 1,
+    "group_name": "05",
+    "incomplete": false,
+    "is_stopped": false,
+    "nic_issue_detected": false,
+    "rate_pps": 500,
+    "receiver": {
+      "bytes_received": 62640128,
+      "duration_s": 6.14,
+      "iface": "eth2",
+      "loss_pct": 46.29441847193872,
+      "nic_stats": {
+        "rx_align_errors": 0,
+        "rx_bytes": 62640128,
+        "rx_crc_errors": 0,
+        "rx_dropped": 0,
+        "rx_errors": 0,
+        "rx_fifo_errors": 0,
+        "rx_frame_errors": 0,
+        "rx_jabber": 0,
+        "rx_mac_missed": 0,
+        "rx_over_errors": 0,
+        "rx_oversize": 0,
+        "rx_packets": 122344,
+        "rx_undersize": 0
+      },
+      "out_of_order": 0,
+      "packets_expected": 0,
+      "packets_lost": 105461,
+      "packets_received": 122344,
+      "slave": "r2s_2",
+      "trailing_loss_detected": true
+    },
+    "receiver_nic_stats": {
+      "rx_align_errors": 0,
+      "rx_bytes": 62640128,
+      "rx_crc_errors": 0,
+      "rx_dropped": 0,
+      "rx_errors": 0,
+      "rx_fifo_errors": 0,
+      "rx_frame_errors": 0,
+      "rx_jabber": 0,
+      "rx_mac_missed": 0,
+      "rx_over_errors": 0,
+      "rx_oversize": 0,
+      "rx_packets": 122344,
+      "rx_undersize": 0
+    },
+    "sender": {
+      "bytes_sent": 121811156,
+      "duration_s": 5.0,
+      "iface": "eth2",
+      "mac": "c0:74:2b:fa:14:9a",
+      "nic_stats": {},
+      "packets_sent": 227805,
+      "slave": "r2s_2"
+    },
+    "sender_stats": [
+      {
+        "bytes_received": 3454908,
+        "mac": "c0:74:2b:fa:19:98",
+        "out_of_order": 0,
+        "packets_expected": 108734,
+        "packets_lost": 101933,
+        "packets_received": 6801
+      },
+      {
+        "bytes_received": 58695844,
+        "mac": "c0:74:2b:fa:14:98",
+        "out_of_order": 0,
+        "packets_expected": 119071,
+        "packets_lost": 3528,
+        "packets_received": 115543
+      }
+    ],
+    "sender_tx_stats": {
+      "c0:74:2b:fa:14:98": {
+        "tx_aborted": 0,
+        "tx_bytes": 60487680,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 118135,
+        "tx_underrun": 0
+      },
+      "c0:74:2b:fa:19:98": {
+        "tx_aborted": 0,
+        "tx_bytes": 60460544,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 118082,
+        "tx_underrun": 0
+      }
+    },
+    "test_id": "30ae80ab",
+    "test_index": 6,
+    "total_tests": 11
+  },
+  {
+    "auto_rate_iterations": 4,
+    "auto_rate_pps": 100000,
+    "common_vlan": 3,
+    "dst_type": 1,
+    "group_name": "05",
+    "incomplete": false,
+    "is_stopped": false,
+    "nic_issue_detected": false,
+    "rate_pps": 500,
+    "receiver": {
+      "bytes_received": 935424,
+      "duration_s": 6.156,
+      "iface": "eth0",
+      "loss_pct": 86.75895057254675,
+      "nic_stats": {
+        "rx_align_errors": 0,
+        "rx_bytes": 6472192,
+        "rx_crc_errors": 0,
+        "rx_dropped": 0,
+        "rx_errors": 0,
+        "rx_fifo_errors": 0,
+        "rx_frame_errors": 0,
+        "rx_jabber": 0,
+        "rx_mac_missed": 0,
+        "rx_over_errors": 0,
+        "rx_oversize": 0,
+        "rx_packets": 12637,
+        "rx_undersize": 0
+      },
+      "out_of_order": 0,
+      "packets_expected": 0,
+      "packets_lost": 11971,
+      "packets_received": 1827,
+      "slave": "r2s_1",
+      "trailing_loss_detected": true
+    },
+    "receiver_nic_stats": {
+      "rx_align_errors": 0,
+      "rx_bytes": 6472192,
+      "rx_crc_errors": 0,
+      "rx_dropped": 0,
+      "rx_errors": 0,
+      "rx_fifo_errors": 0,
+      "rx_frame_errors": 0,
+      "rx_jabber": 0,
+      "rx_mac_missed": 0,
+      "rx_over_errors": 0,
+      "rx_oversize": 0,
+      "rx_packets": 12637,
+      "rx_undersize": 0
+    },
+    "sender": {
+      "bytes_sent": 7118424,
+      "duration_s": 5.001,
+      "iface": "eth0",
+      "mac": "c0:74:2b:fa:19:98",
+      "nic_stats": {},
+      "packets_sent": 13798,
+      "slave": "r2s_1"
+    },
+    "sender_stats": [
+      {
+        "bytes_received": 623316,
+        "mac": "c0:74:2b:fa:14:9b",
+        "out_of_order": 0,
+        "packets_expected": 1227,
+        "packets_lost": 0,
+        "packets_received": 1227
+      },
+      {
+        "bytes_received": 304800,
+        "mac": "c0:74:2b:fa:13:10",
+        "out_of_order": 0,
+        "packets_expected": 12571,
+        "packets_lost": 11971,
+        "packets_received": 600
+      }
+    ],
+    "sender_tx_stats": {
+      "c0:74:2b:fa:13:10": {
+        "tx_aborted": 0,
+        "tx_bytes": 6046208,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 11808,
+        "tx_underrun": 0
+      },
+      "c0:74:2b:fa:14:9b": {
+        "tx_aborted": 0,
+        "tx_bytes": 133120,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 260,
+        "tx_underrun": 0
+      }
+    },
+    "test_id": "30ae80ab",
+    "test_index": 7,
+    "total_tests": 11
+  },
+  {
+    "auto_rate_iterations": 4,
+    "auto_rate_pps": 100000,
+    "common_vlan": 3,
+    "dst_type": 1,
+    "group_name": "05",
+    "incomplete": false,
+    "is_stopped": false,
+    "nic_issue_detected": false,
+    "rate_pps": 500,
+    "receiver": {
+      "bytes_received": 61484544,
+      "duration_s": 6.188,
+      "iface": "eth3",
+      "loss_pct": 8.674920528693326,
+      "nic_stats": {
+        "rx_align_errors": 0,
+        "rx_bytes": 61484544,
+        "rx_crc_errors": 0,
+        "rx_dropped": 0,
+        "rx_errors": 0,
+        "rx_fifo_errors": 0,
+        "rx_frame_errors": 0,
+        "rx_jabber": 0,
+        "rx_mac_missed": 0,
+        "rx_over_errors": 0,
+        "rx_oversize": 0,
+        "rx_packets": 120087,
+        "rx_undersize": 0
+      },
+      "out_of_order": 0,
+      "packets_expected": 0,
+      "packets_lost": 11407,
+      "packets_received": 120087,
+      "slave": "r2s_2",
+      "trailing_loss_detected": false
+    },
+    "receiver_nic_stats": {
+      "rx_align_errors": 0,
+      "rx_bytes": 61484544,
+      "rx_crc_errors": 0,
+      "rx_dropped": 0,
+      "rx_errors": 0,
+      "rx_fifo_errors": 0,
+      "rx_frame_errors": 0,
+      "rx_jabber": 0,
+      "rx_mac_missed": 0,
+      "rx_over_errors": 0,
+      "rx_oversize": 0,
+      "rx_packets": 120087,
+      "rx_undersize": 0
+    },
+    "sender": {
+      "bytes_sent": 67324928,
+      "duration_s": 5.0,
+      "iface": "eth3",
+      "mac": "c0:74:2b:fa:14:9b",
+      "nic_stats": {},
+      "packets_sent": 131494,
+      "slave": "r2s_2"
+    },
+    "sender_stats": [
+      {
+        "bytes_received": 57597548,
+        "mac": "c0:74:2b:fa:19:98",
+        "out_of_order": 0,
+        "packets_expected": 118921,
+        "packets_lost": 5540,
+        "packets_received": 113381
+      },
+      {
+        "bytes_received": 3406648,
+        "mac": "c0:74:2b:fa:13:10",
+        "out_of_order": 0,
+        "packets_expected": 12573,
+        "packets_lost": 5867,
+        "packets_received": 6706
+      }
+    ],
+    "sender_tx_stats": {
+      "c0:74:2b:fa:13:10": {
+        "tx_aborted": 0,
+        "tx_bytes": 6046208,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 11808,
+        "tx_underrun": 0
+      },
+      "c0:74:2b:fa:19:98": {
+        "tx_aborted": 0,
+        "tx_bytes": 60460544,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 118082,
+        "tx_underrun": 0
+      }
+    },
+    "test_id": "30ae80ab",
+    "test_index": 8,
+    "total_tests": 11
+  },
+  {
+    "auto_rate_iterations": 4,
+    "auto_rate_pps": 100000,
+    "common_vlan": 3,
+    "dst_type": 1,
+    "group_name": "05",
+    "incomplete": false,
+    "is_stopped": false,
+    "nic_issue_detected": false,
+    "rate_pps": 500,
+    "receiver": {
+      "bytes_received": 6785024,
+      "duration_s": 6.216,
+      "iface": "eth0",
+      "loss_pct": 88.97953413333998,
+      "nic_stats": {
+        "rx_align_errors": 0,
+        "rx_bytes": 6785024,
+        "rx_crc_errors": 0,
+        "rx_dropped": 0,
+        "rx_errors": 0,
+        "rx_fifo_errors": 0,
+        "rx_frame_errors": 0,
+        "rx_jabber": 0,
+        "rx_mac_missed": 0,
+        "rx_over_errors": 0,
+        "rx_oversize": 0,
+        "rx_packets": 13252,
+        "rx_undersize": 0
+      },
+      "out_of_order": 0,
+      "packets_expected": 0,
+      "packets_lost": 106997,
+      "packets_received": 13252,
+      "slave": "r2s_3",
+      "trailing_loss_detected": true
+    },
+    "receiver_nic_stats": {
+      "rx_align_errors": 0,
+      "rx_bytes": 6785024,
+      "rx_crc_errors": 0,
+      "rx_dropped": 0,
+      "rx_errors": 0,
+      "rx_fifo_errors": 0,
+      "rx_frame_errors": 0,
+      "rx_jabber": 0,
+      "rx_mac_missed": 0,
+      "rx_over_errors": 0,
+      "rx_oversize": 0,
+      "rx_packets": 13252,
+      "rx_undersize": 0
+    },
+    "sender": {
+      "bytes_sent": 61569012,
+      "duration_s": 5.0,
+      "iface": "eth0",
+      "mac": "c0:74:2b:fa:13:10",
+      "nic_stats": {},
+      "packets_sent": 120249,
+      "slave": "r2s_3"
+    },
+    "sender_stats": [
+      {
+        "bytes_received": 6056884,
+        "mac": "c0:74:2b:fa:19:98",
+        "out_of_order": 0,
+        "packets_expected": 118920,
+        "packets_lost": 106997,
+        "packets_received": 11923
+      },
+      {
+        "bytes_received": 675132,
+        "mac": "c0:74:2b:fa:14:9b",
+        "out_of_order": 0,
+        "packets_expected": 1329,
+        "packets_lost": 0,
+        "packets_received": 1329
+      }
+    ],
+    "sender_tx_stats": {
+      "c0:74:2b:fa:14:9b": {
+        "tx_aborted": 0,
+        "tx_bytes": 133120,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 260,
+        "tx_underrun": 0
+      },
+      "c0:74:2b:fa:19:98": {
+        "tx_aborted": 0,
+        "tx_bytes": 60460544,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 118082,
+        "tx_underrun": 0
+      }
+    },
+    "test_id": "30ae80ab",
+    "test_index": 9,
+    "total_tests": 11
+  },
+  {
+    "auto_rate_iterations": 4,
+    "auto_rate_pps": 100000,
+    "common_vlan": 4,
+    "dst_type": 1,
+    "group_name": "05",
+    "incomplete": false,
+    "is_stopped": false,
+    "nic_issue_detected": false,
+    "rate_pps": 500,
+    "receiver": {
+      "bytes_received": 1034752,
+      "duration_s": 6.216,
+      "iface": "eth0",
+      "loss_pct": 0.0,
+      "nic_stats": {
+        "rx_align_errors": 0,
+        "rx_bytes": 6484480,
+        "rx_crc_errors": 0,
+        "rx_dropped": 0,
+        "rx_errors": 0,
+        "rx_fifo_errors": 0,
+        "rx_frame_errors": 0,
+        "rx_jabber": 0,
+        "rx_mac_missed": 0,
+        "rx_over_errors": 0,
+        "rx_oversize": 0,
+        "rx_packets": 12665,
+        "rx_undersize": 0
+      },
+      "out_of_order": 0,
+      "packets_expected": 0,
+      "packets_lost": 0,
+      "packets_received": 2021,
+      "slave": "r2s_1",
+      "trailing_loss_detected": false
+    },
+    "receiver_nic_stats": {
+      "rx_align_errors": 0,
+      "rx_bytes": 6484480,
+      "rx_crc_errors": 0,
+      "rx_dropped": 0,
+      "rx_errors": 0,
+      "rx_fifo_errors": 0,
+      "rx_frame_errors": 0,
+      "rx_jabber": 0,
+      "rx_mac_missed": 0,
+      "rx_over_errors": 0,
+      "rx_oversize": 0,
+      "rx_packets": 12665,
+      "rx_undersize": 0
+    },
+    "sender": {
+      "bytes_sent": 1034752,
+      "duration_s": 5.0,
+      "iface": "eth0",
+      "mac": "c0:74:2b:fa:19:98",
+      "nic_stats": {},
+      "packets_sent": 2021,
+      "slave": "r2s_1"
+    },
+    "sender_stats": [
+      {
+        "bytes_received": 1026668,
+        "mac": "c0:74:2b:fa:13:12",
+        "out_of_order": 0,
+        "packets_expected": 2021,
+        "packets_lost": 0,
+        "packets_received": 2021
+      }
+    ],
+    "sender_tx_stats": {
+      "c0:74:2b:fa:13:12": {
+        "tx_aborted": 0,
+        "tx_bytes": 531456,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 1038,
+        "tx_underrun": 0
+      }
+    },
+    "test_id": "30ae80ab",
+    "test_index": 10,
+    "total_tests": 11
+  },
+  {
+    "common_vlan": 4,
+    "dst_type": 1,
+    "group_name": "05",
+    "incomplete": false,
+    "is_stopped": false,
+    "nic_issue_detected": false,
+    "rate_pps": 500,
+    "receiver": {
+      "bytes_received": 60887552,
+      "duration_s": 6.248,
+      "iface": "eth2",
+      "loss_pct": 0.0,
+      "nic_stats": {
+        "rx_align_errors": 0,
+        "rx_bytes": 60887552,
+        "rx_crc_errors": 0,
+        "rx_dropped": 0,
+        "rx_errors": 0,
+        "rx_fifo_errors": 0,
+        "rx_frame_errors": 0,
+        "rx_jabber": 0,
+        "rx_mac_missed": 0,
+        "rx_over_errors": 0,
+        "rx_oversize": 0,
+        "rx_packets": 118921,
+        "rx_undersize": 0
+      },
+      "out_of_order": 0,
+      "packets_expected": 0,
+      "packets_lost": 0,
+      "packets_received": 118921,
+      "slave": "r2s_3",
+      "trailing_loss_detected": false
+    },
+    "receiver_nic_stats": {
+      "rx_align_errors": 0,
+      "rx_bytes": 60887552,
+      "rx_crc_errors": 0,
+      "rx_dropped": 0,
+      "rx_errors": 0,
+      "rx_fifo_errors": 0,
+      "rx_frame_errors": 0,
+      "rx_jabber": 0,
+      "rx_mac_missed": 0,
+      "rx_over_errors": 0,
+      "rx_oversize": 0,
+      "rx_packets": 118921,
+      "rx_undersize": 0
+    },
+    "sender": {
+      "bytes_sent": 60887552,
+      "duration_s": 5.0,
+      "iface": "eth2",
+      "mac": "c0:74:2b:fa:13:12",
+      "nic_stats": {},
+      "packets_sent": 118921,
+      "slave": "r2s_3"
+    },
+    "sender_stats": [
+      {
+        "bytes_received": 60411868,
+        "mac": "c0:74:2b:fa:19:98",
+        "out_of_order": 0,
+        "packets_expected": 118921,
+        "packets_lost": 0,
+        "packets_received": 118921
+      }
+    ],
+    "sender_tx_stats": {
+      "c0:74:2b:fa:19:98": {
+        "tx_aborted": 0,
+        "tx_bytes": 60460544,
+        "tx_dropped": 0,
+        "tx_errors": 0,
+        "tx_fifo_errors": 0,
+        "tx_packets": 118082,
+        "tx_underrun": 0
+      }
+    },
+    "test_id": "30ae80ab",
+    "test_index": 11,
+    "total_tests": 11
+  }
+]

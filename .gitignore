@@ -1,0 +1,67 @@
+cat > .gitignore << 'EOF'
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyQt
+*.pyc
+*.pyo
+*.pyd
+*.ui~
+*.qmlc
+*.jsc
+
+# Logs
+*.log
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+config/topology.json
+config/local_*.json
+*.db
+*.sqlite
+*.pid
+pktgen
+agent.log
+install.log
+/root/
+/tmp/
+
+# Backup files
+*.bak
+*.backup
+*.old
+*~
+EOF

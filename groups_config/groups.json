@@ -1,0 +1,80 @@
+{
+  "groups": {
+    "D-link": [
+      {
+        "slave": "r2s_1",
+        "host": "192.168.2.1",
+        "iface": "eth2",
+        "mac": "c0:74:2b:fa:19:9a"
+      },
+      {
+        "slave": "r2s_1",
+        "host": "192.168.2.1",
+        "iface": "eth3",
+        "mac": "c0:74:2b:fa:19:9b"
+      },
+      {
+        "slave": "r2s_2",
+        "host": "192.168.2.2",
+        "iface": "eth0",
+        "mac": "c0:74:2b:fa:14:98"
+      },
+      {
+        "slave": "r2s_3",
+        "host": "192.168.2.3",
+        "iface": "eth2",
+        "mac": "c0:74:2b:fa:13:12"
+      },
+      {
+        "slave": "r2s_4",
+        "host": "192.168.2.4",
+        "iface": "eth2",
+        "mac": "c0:74:2b:fa:19:b6"
+      },
+      {
+        "slave": "r2s_4",
+        "host": "192.168.2.4",
+        "iface": "eth3",
+        "mac": "c0:74:2b:fa:19:b7"
+      }
+    ],
+    "ESP-Box": [
+      {
+        "slave": "r2s_1",
+        "host": "192.168.2.1",
+        "iface": "eth0",
+        "mac": "c0:74:2b:fa:19:98"
+      },
+      {
+        "slave": "r2s_2",
+        "host": "192.168.2.2",
+        "iface": "eth2",
+        "mac": "c0:74:2b:fa:14:9a"
+      },
+      {
+        "slave": "r2s_2",
+        "host": "192.168.2.2",
+        "iface": "eth3",
+        "mac": "c0:74:2b:fa:14:9b"
+      },
+      {
+        "slave": "r2s_3",
+        "host": "192.168.2.3",
+        "iface": "eth0",
+        "mac": "c0:74:2b:fa:13:10"
+      },
+      {
+        "slave": "r2s_3",
+        "host": "192.168.2.3",
+        "iface": "eth3",
+        "mac": "c0:74:2b:fa:13:13"
+      },
+      {
+        "slave": "r2s_4",
+        "host": "192.168.2.4",
+        "iface": "eth0",
+        "mac": "c0:74:2b:fa:19:b4"
+      }
+    ]
+  }
+}

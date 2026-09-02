@@ -1585,6 +1585,10 @@ class MainWindow(QMainWindow):
         btn_save.clicked.connect(self.on_save_vlan_profile)
         profile_layout.addWidget(btn_save)
 
+        btn_add_device = QPushButton("➕ Добавить R2S")
+        btn_add_device.clicked.connect(self.add_new_device_dialog)
+        profile_layout.addWidget(btn_add_device)
+
         btn_clear = QPushButton("🗑 Очистить все VLAN")
         btn_clear.clicked.connect(self.on_clear_all_vlans)
         btn_clear.setStyleSheet("color: #f44336;")
@@ -2057,6 +2061,109 @@ class MainWindow(QMainWindow):
                 self.receiver_combo.setCurrentIndex(0)
         elif count > 0:
             self.receiver_combo.setCurrentIndex(0)
+
+    # ------------------------------------------------------------------------
+    # Topology update
+    # ------------------------------------------------------------------------
+    def get_mac_addresses_from_r2s(self, ip: str) -> dict:
+        """Получает MAC-адреса интерфейсов с R2S по SSH."""
+        import subprocess
+        import re
+        
+        result = {}
+        try:
+            # Выполняем команду на R2S
+            cmd = f"ssh root@{ip} 'cat /sys/class/net/eth0/address /sys/class/net/eth2/address /sys/class/net/eth3/address 2>/dev/null'"
+            output = subprocess.check_output(cmd, shell=True, timeout=5, stderr=subprocess.DEVNULL)
+            lines = output.decode().strip().split('\n')
+            
+            interfaces = ['eth0', 'eth2', 'eth3']
+            for idx, iface in enumerate(interfaces):
+                if idx < len(lines) and lines[idx].strip():
+                    mac = lines[idx].strip()
+                    if re.match(r'([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})', mac):
+                        result[iface] = mac
+        except Exception as e:
+            print(f"Ошибка получения MAC: {e}")
+        
+        return result
+
+    def add_new_device_dialog(self):
+        """Диалог добавления нового устройства."""
+        ip, ok = QInputDialog.getText(self, "Добавить устройство", 
+                                    "Введите IP адрес нового R2S (например, 192.168.2.4):")
+        if not ok or not ip:
+            return
+        
+        # Получаем MAC-адреса
+        macs = self.get_mac_addresses_from_r2s(ip)
+        if not macs:
+            QMessageBox.warning(self, "Ошибка", f"Не удалось получить MAC-адреса с {ip}")
+            return
+        
+        # Определяем номер устройства
+        slave_name = f"r2s_{ip.split('.')[-1]}"
+        
+        # Добавляем в topology.json
+        with open(self.topology_path, 'r') as f:
+            topology = json.load(f)
+        
+        topology["slaves"][slave_name] = {
+            "host": ip,
+            "port": 5959,
+            "interfaces": {
+                "eth0": {"mac": macs.get("eth0", ""), "vlans": []},
+                "eth2": {"mac": macs.get("eth2", ""), "vlans": []},
+                "eth3": {"mac": macs.get("eth3", ""), "vlans": []}
+            }
+        }
+        
+        with open(self.topology_path, 'w') as f:
+            json.dump(topology, f, indent=2)
+        
+        # ============================================================
+        # ОБНОВЛЯЕМ ВСЕ UI КОМПОНЕНТЫ
+        # ============================================================
+        
+        # 1. Обновляем топологию в памяти
+        self.topology = topology
+        
+        # 2. Обновляем список интерфейсов для выбора
+        self.rebuild_endpoint_lists()
+        
+        # 3. Обновляем список интерфейсов для группы
+        self.update_group_iface_combo()
+        self.refresh_group_iface_list()
+        
+        # 4. Обновляем таблицу устройств
+        self.update_device_table()
+        
+        # 5. Обновляем вкладку "Управление агентами"
+        self.refresh_terminal_tab()
+        
+        # 6. Обновляем статусную строку
+        
+        self.topo_label.setText(f"Топология: {self.topology_path}")
+        
+    def refresh_terminal_tab(self):
+        """Обновляет вкладку 'Управление агентами'."""
+        # Находим вкладку TerminalTab
+        for i in range(self.tab_widget.count()):
+            tab = self.tab_widget.widget(i)
+            if isinstance(tab, TerminalTab):
+                # Обновляем список агентов
+                tab.refresh_agents(self.get_agents())
+                break
+
+    def get_agents(self) -> dict:
+        """Возвращает словарь {имя: ip} для всех агентов."""
+        agents = {}
+        slaves = self.topology.get("slaves", {})
+        for name, info in slaves.items():
+            host = info.get("host")
+            if host:
+                agents[name] = host
+        return agents
 
     # ------------------------------------------------------------------------
     # VLAN Profiles

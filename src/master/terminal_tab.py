@@ -364,7 +364,23 @@ class TerminalTab(QWidget):
                 self.terminal_widgets[name] = widget
         
         layout.addWidget(self.terminal_tabs)
-    
+
+    def refresh_agents(self, hosts: dict):
+        """Обновляет список агентов."""
+        self.hosts = hosts
+        
+        # Очищаем существующие вкладки
+        while self.terminal_tabs.count() > 0:
+            self.terminal_tabs.removeTab(0)
+        
+        self.terminal_widgets.clear()
+        
+        # Создаем новые вкладки
+        for name, ip in hosts.items():
+            widget = TerminalWidget(ip, name)
+            self.terminal_tabs.addTab(widget, f"📡 {name}")
+            self.terminal_widgets[name] = widget
+            
     def get_current_widget(self) -> TerminalWidget:
         idx = self.terminal_tabs.currentIndex()
         if idx >= 0:

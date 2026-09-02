@@ -133,16 +133,58 @@ echo ""
 # ============================================================
 echo -e "${BLUE}[6/6] Создание desktop файла...${NC}"
 
-cat > /usr/share/applications/op-test.desktop << EOF
+cat > /usr/share/applications/op-test.desktop << 'EOF'
 [Desktop Entry]
+Version=1.0
+Type=Application
 Name=OP-Test
 Comment=Тестирование коммутаторов
 Exec=python3 /root/op-test/run_gui.py /root/op-test/config/topology.json
 Icon=/root/op-test/icon.png
 Terminal=false
-Type=Application
 Categories=Network;
+StartupNotify=true
 EOF
+
+# 2. Ярлык на рабочем столе
+DESKTOP_DIR="/home/orangepi/Desktop"
+if [ ! -d "$DESKTOP_DIR" ]; then
+    DESKTOP_DIR="/root/Desktop"
+fi
+
+if [ -d "$DESKTOP_DIR" ]; then
+    cat > "$DESKTOP_DIR/op-test.desktop" << 'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=OP-Test
+Comment=Тестирование коммутаторов
+Exec=python3 /root/op-test/run_gui.py /root/op-test/config/topology.json
+Icon=/root/op-test/icon.png
+Terminal=false
+Categories=Network;
+StartupNotify=true
+EOF
+    chmod +x "$DESKTOP_DIR/op-test.desktop"
+    echo -e "${GREEN}✅ Ярлык создан на рабочем столе${NC}"
+else
+    echo -e "${YELLOW}⚠️ Папка Desktop не найдена${NC}"
+fi
+
+# 3. Обновление кэша
+update-desktop-database /usr/share/applications/ 2>/dev/null || true
+update-menus 2>/dev/null || true
+
+# 4. Создание иконки (если нет)
+if [ ! -f "/root/op-test/icon.png" ]; then
+    if command -v convert >/dev/null 2>&1; then
+        convert -size 64x64 xc:blue -fill white -font /usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf -pointsize 24 -gravity center -annotate 0 "OP" /root/op-test/icon.png 2>/dev/null || true
+        echo -e "${GREEN}✅ Иконка создана${NC}"
+    else
+        # Копировать стандартную иконку сети
+        cp /usr/share/icons/hicolor/64x64/apps/network.png /root/op-test/icon.png 2>/dev/null || true
+    fi
+fi
 
 echo -e "${GREEN}✅ Desktop файл создан${NC}"
 

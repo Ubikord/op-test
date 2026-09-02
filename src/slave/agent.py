@@ -567,7 +567,7 @@ def main():
         config = json.load(f)
         
     try:
-        subprocess.run(['/root/clean_network.sh'], check=False, timeout=5)
+        subprocess.run(['/root/op-test/clean_network.sh'], check=False, timeout=5)
         log.info("Скрипт очистки сети выполнен")
     except Exception as e:
         log.warning(f"Не удалось выполнить скрипт очистки сети: {e}")

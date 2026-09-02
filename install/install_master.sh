@@ -15,9 +15,10 @@ echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}  Установка OP-Test Master на Orange Pi 5${NC}"
 echo -e "${BLUE}========================================${NC}"
 
-# Проверка, что мы на Orange Pi 5
-if [ ! -f "/etc/armbian-release" ] && [ ! -f "/etc/orangepi-release" ]; then
-    echo -e "${YELLOW}⚠️ Это может быть не Orange Pi 5, продолжаем...${NC}"
+# Проверка прав root
+if [ "$EUID" -ne 0 ]; then
+    echo -e "${RED}❌ Запустите скрипт с правами root (sudo)${NC}"
+    exit 1
 fi
 
 # ============================================================
@@ -41,27 +42,32 @@ if [ -d "op-test" ]; then
     cd op-test
     git pull origin main
 else
-    git clone <ваш_репозиторий> op-test
+    git clone https://github.com/Ubikord/op-test.git op-test
     cd op-test
 fi
 
-echo -e "${GREEN}✅ Код склонирован${NC}"
+echo -e "${GREEN}✅ Код склонирован в /root/op-test${NC}"
 
 # ============================================================
 # ШАГ 3: Установка Python зависимостей
 # ============================================================
 echo -e "${BLUE}[3/6] Установка Python зависимостей...${NC}"
 
-pip3 install -r requirements.txt
-
-echo -e "${GREEN}✅ Python зависимости установлены${NC}"
+if [ -f "requirements.txt" ]; then
+    pip3 install -r requirements.txt
+    echo -e "${GREEN}✅ Python зависимости установлены${NC}"
+else
+    echo -e "${YELLOW}⚠️ requirements.txt не найден${NC}"
+fi
 
 # ============================================================
 # ШАГ 4: Создание topology.json
 # ============================================================
 echo -e "${BLUE}[4/6] Создание topology.json...${NC}"
 
-cat > config/topology.json << EOF
+mkdir -p config
+if [ ! -f "config/topology.json" ]; then
+    cat > config/topology.json << EOF
 {
     "slaves": {
         "r2s_1": {
@@ -94,18 +100,24 @@ cat > config/topology.json << EOF
     }
 }
 EOF
-
-echo -e "${GREEN}✅ topology.json создан${NC}"
+    echo -e "${GREEN}✅ topology.json создан${NC}"
+else
+    echo -e "${YELLOW}⚠️ topology.json уже существует${NC}"
+fi
 
 # ============================================================
 # ШАГ 5: Настройка SSH ключей
 # ============================================================
 echo -e "${BLUE}[5/6] Настройка SSH ключей...${NC}"
 
-# Генерация ключа если нет
+mkdir -p /root/.ssh
+chmod 700 /root/.ssh
+
 if [ ! -f /root/.ssh/id_rsa ]; then
     ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_rsa -N ""
     echo -e "${GREEN}✅ SSH ключ создан${NC}"
+else
+    echo -e "${YELLOW}⚠️ SSH ключ уже существует${NC}"
 fi
 
 # Публичный ключ для копирования на R2S
@@ -114,12 +126,6 @@ echo -e "${YELLOW}Публичный ключ для добавления на R
 echo -e "${BLUE}--------------------------------------------------${NC}"
 cat /root/.ssh/id_rsa.pub
 echo -e "${BLUE}--------------------------------------------------${NC}"
-echo ""
-
-echo -e "${YELLOW}⚠️ Скопируйте этот ключ и добавьте его на каждый R2S:${NC}"
-echo -e "   ssh-copy-id root@192.168.2.1"
-echo -e "   ssh-copy-id root@192.168.2.2"
-echo -e "   ssh-copy-id root@192.168.2.3"
 echo ""
 
 # ============================================================
@@ -154,4 +160,7 @@ echo -e "   python3 run_gui.py config/topology.json"
 echo ""
 echo -e "${BLUE}Или через меню приложений: OP-Test${NC}"
 echo ""
-echo -e "${YELLOW}⚠️ Добавьте SSH ключ на все R2S перед запуском${NC}"
+echo -e "${YELLOW}⚠️ Добавьте SSH ключ на все R2S перед запуском:${NC}"
+echo -e "   ssh-copy-id root@192.168.2.1"
+echo -e "   ssh-copy-id root@192.168.2.2"
+echo -e "   ssh-copy-id root@192.168.2.3"

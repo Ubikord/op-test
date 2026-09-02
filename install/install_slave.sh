@@ -90,7 +90,7 @@ if ping -c 1 8.8.8.8 >/dev/null 2>&1; then
     
     # Установка ТОЛЬКО необходимых пакетов
     echo -e "${YELLOW}Установка python3, gcc...${NC}"
-    opkg install python3 gcc 2>/dev/null || echo -e "${YELLOW}⚠️ Некоторые пакеты не установлены${NC}"
+    opkg install python3 gcc ethtool 2>/dev/null || echo -e "${YELLOW}⚠️ Некоторые пакеты не установлены${NC}"
 else
     echo -e "${YELLOW}⚠️ Интернет недоступен, пропускаем установку пакетов${NC}"
 fi
@@ -162,12 +162,6 @@ if [ -f "src/slave/clean_network.sh" ]; then
     cp src/slave/clean_network.sh /root/op-test/
     chmod +x /root/op-test/clean_network.sh
     echo -e "${GREEN}✅ clean_network.sh скопирован${NC}"
-fi
-
-echo "✅ Очистка завершена!"
-EOF
-    chmod +x /root/op-test/clean_network.sh
-    echo -e "${GREEN}✅ clean_network.sh создан${NC}"
 fi
 
 # ============================================================

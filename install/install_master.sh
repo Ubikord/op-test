@@ -146,7 +146,6 @@ Categories=Network;
 StartupNotify=true
 EOF
 
-# 2. Ярлык на рабочем столе
 DESKTOP_DIR="/home/orangepi/Desktop"
 if [ ! -d "$DESKTOP_DIR" ]; then
     DESKTOP_DIR="/root/Desktop"
@@ -171,11 +170,9 @@ else
     echo -e "${YELLOW}⚠️ Папка Desktop не найдена${NC}"
 fi
 
-# 3. Обновление кэша
 update-desktop-database /usr/share/applications/ 2>/dev/null || true
 update-menus 2>/dev/null || true
 
-# 4. Создание иконки (если нет)
 if [ ! -f "/root/op-test/icon.png" ]; then
     if command -v convert >/dev/null 2>&1; then
         convert -size 64x64 xc:blue -fill white -font /usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf -pointsize 24 -gravity center -annotate 0 "OP" /root/op-test/icon.png 2>/dev/null || true

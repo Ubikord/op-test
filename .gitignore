@@ -65,3 +65,7 @@ install.log
 *.old
 *~
 EOF
+# User-specific files
+groups_config/
+slaves_vlans/
+*.json

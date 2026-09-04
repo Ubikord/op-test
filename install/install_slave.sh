@@ -38,7 +38,7 @@ fi
 echo -e "${BLUE}[1/7] Настройка SSH и установка пароля...${NC}"
 
 # Устанавливаем пароль root (по умолчанию orangepi)
-echo "root:orangepi" | chpasswd
+printf "orangepi\norangepi\n" | passwd root
 echo -e "${GREEN}✅ Пароль root установлен: orangepi${NC}"
 
 # Настройка SSH

@@ -33,15 +33,21 @@ if [ ! -f "README.md" ] || [ ! -d "src" ]; then
 fi
 
 # ============================================================
-# 2. Настройка SSH (ВКЛЮЧАЕМ ПАРОЛЬ ВРЕМЕННО)
+# 2. Установка пароля root и настройка SSH
 # ============================================================
-echo -e "${BLUE}[1/7] Настройка SSH (временный пароль)...${NC}"
+echo -e "${BLUE}[1/7] Настройка SSH и установка пароля...${NC}"
+
+# Устанавливаем пароль root (по умолчанию orangepi)
+echo "root:orangepi" | chpasswd
+echo -e "${GREEN}✅ Пароль root установлен: orangepi${NC}"
+
+# Настройка SSH
 uci set dropbear.@dropbear[0].RootLogin='1'
 uci set dropbear.@dropbear[0].PasswordAuth='1'
 uci set dropbear.@dropbear[0].RootPasswordAuth='1'
 uci commit dropbear
 /etc/init.d/dropbear restart
-echo -e "${GREEN}✅ SSH настроен (пароль включен временно)${NC}"
+echo -e "${GREEN}✅ SSH настроен (пароль включен)${NC}"
 
 # ============================================================
 # 3. Добавление публичного ключа (если передан)

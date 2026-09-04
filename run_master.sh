@@ -1,28 +1,43 @@
 #!/bin/bash
-# ============================================
-# Запуск Master GUI с правильным venv
-# ============================================
+# run_master.sh - Запуск OP-Test Master
 
-PROJECT_DIR="/home/orangepi/op-test"
-CONFIG_FILE="$PROJECT_DIR/config/topology.json"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Переходим в проект
-cd "$PROJECT_DIR" || exit 1
+echo "Запуск OP-Test из: ${SCRIPT_DIR}"
 
-# Активируем venv (только если не активирован)
-if [ -z "$VIRTUAL_ENV" ]; then
+# Активация виртуального окружения
+if [ -f "${SCRIPT_DIR}/venv/bin/activate" ]; then
+    echo "Активация venv..."
+    source "${SCRIPT_DIR}/venv/bin/activate"
+else
+    echo "⚠️ venv не найден, создаем..."
+    cd "${SCRIPT_DIR}"
+    python3 -m venv venv
     source venv/bin/activate
+    pip install -r requirements.txt
 fi
 
-# Проверка, что мы в правильном venv
-echo "✅ Python: $(which python3)"
-echo "✅ PyQt5: $(python3 -c 'import PyQt5; print(PyQt5.__file__)' 2>/dev/null || echo 'не найден')"
+# Проверяем наличие topology.json
+if [ ! -f "${SCRIPT_DIR}/config/topology.json" ]; then
+    echo "⚠️ config/topology.json не найден, создаем шаблон..."
+    mkdir -p "${SCRIPT_DIR}/config"
+    cat > "${SCRIPT_DIR}/config/topology.json" << 'JSON'
+{
+    "slaves": {
+        "r2s_1": {
+            "host": "192.168.2.1",
+            "port": 5959,
+            "interfaces": {
+                "eth0": {"mac": "", "vlans": []},
+                "eth2": {"mac": "", "vlans": []},
+                "eth3": {"mac": "", "vlans": []}
+            }
+        }
+    }
+}
+JSON
+    echo -e "\033[32m✅ topology.json создан\033[0m"
+fi
 
-# Отключаем аппаратное ускорение
-export QT_XCB_FORCE_SOFTWARE_OPENGL=1
-export LIBGL_ALWAYS_SOFTWARE=1
-export QT_QPA_PLATFORM=xcb
-export QT_LOGGING_RULES='*=false'
-
-# Запуск
-python3 run_gui.py "$CONFIG_FILE"
+# Запускаем GUI
+python3 "${SCRIPT_DIR}/run_gui.py" "${SCRIPT_DIR}/config/topology.json"

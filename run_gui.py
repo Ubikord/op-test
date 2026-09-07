@@ -1754,14 +1754,23 @@ class MainWindow(QMainWindow):
         return TerminalTab(agents)
 
     def get_agents(self) -> dict:
-        """Возвращает словарь {имя: ip} для всех агентов."""
+        """Возвращает отсортированный словарь {имя: ip} для всех агентов."""
         agents = {}
         slaves = self.topology.get("slaves", {})
         for name, info in slaves.items():
             host = info.get("host")
             if host:
                 agents[name] = host
-        return agents
+        
+        # Сортируем по номеру устройства
+        def get_device_number(name: str) -> int:
+            import re
+            match = re.search(r'r2s[_\-]?(\d+)', name)
+            if match:
+                return int(match.group(1))
+            return 999
+        
+        return dict(sorted(agents.items(), key=lambda x: get_device_number(x[0])))
 
     # ------------------------------------------------------------------------
     # Параметры теста

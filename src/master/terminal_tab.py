@@ -297,9 +297,18 @@ class TerminalTab(QWidget):
     
     def __init__(self, hosts: dict):
         super().__init__()
-        self.hosts = hosts
+        sorted_hosts = dict(sorted(hosts.items(), key=lambda x: self._get_device_number(x[0])))
+        self.hosts = sorted_hosts
         self.terminal_widgets = {}
         self.setup_ui()
+
+    def _get_device_number(self, name: str) -> int:
+        """Извлекает номер устройства из имени (r2s_1 → 1)."""
+        import re
+        match = re.search(r'r2s[_\-]?(\d+)', name)
+        if match:
+            return int(match.group(1))
+        return 999  # Если нет номера — в конец
     
     def setup_ui(self):
         layout = QVBoxLayout(self)
@@ -366,8 +375,17 @@ class TerminalTab(QWidget):
         layout.addWidget(self.terminal_tabs)
 
     def refresh_agents(self, hosts: dict):
-        """Обновляет список агентов."""
-        self.hosts = hosts
+        """Обновляет список агентов с сортировкой."""
+        # Сортируем hosts
+        def get_device_number(name: str) -> int:
+            import re
+            match = re.search(r'r2s[_\-]?(\d+)', name)
+            if match:
+                return int(match.group(1))
+            return 999
+        
+        sorted_hosts = dict(sorted(hosts.items(), key=lambda x: get_device_number(x[0])))
+        self.hosts = sorted_hosts
         
         # Очищаем существующие вкладки
         while self.terminal_tabs.count() > 0:
@@ -375,8 +393,8 @@ class TerminalTab(QWidget):
         
         self.terminal_widgets.clear()
         
-        # Создаем новые вкладки
-        for name, ip in hosts.items():
+        # Создаем новые вкладки в отсортированном порядке
+        for name, ip in sorted_hosts.items():
             widget = TerminalWidget(ip, name)
             self.terminal_tabs.addTab(widget, f"📡 {name}")
             self.terminal_widgets[name] = widget

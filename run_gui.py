@@ -1991,9 +1991,9 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------------
     def all_endpoints(self) -> list[tuple[str, str]]:
         eps = set()
-        for link in self.topology.get("links", []):
-            eps.add((link["a"]["slave"], link["a"]["iface"]))
-            eps.add((link["b"]["slave"], link["b"]["iface"]))
+        for slave_name, slave_info in self.topology.get("slaves", {}).items():
+            for iface_name in slave_info.get("interfaces", {}).keys():
+                eps.add((slave_name, iface_name))
         return sorted(eps)
 
     def is_interface_up(self, slave: str, iface: str) -> bool:

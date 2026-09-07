@@ -55,6 +55,8 @@ scp -o StrictHostKeyChecking=no src/common/protocol.py root@$TARGET_IP:/root/op-
 scp -o StrictHostKeyChecking=no src/slave/pktgen.c root@$TARGET_IP:/root/op-test/
 scp -o StrictHostKeyChecking=no src/slave/clean_network.sh root@$TARGET_IP:/root/op-test/ 2>/dev/null || true
 
+ssh -o StrictHostKeyChecking=no root@$TARGET_IP "chmod +x /root/op-test/clean_network.sh 2>/dev/null || true"
+
 # Копируем скрипт установки в /root (не в op-test)
 scp -o StrictHostKeyChecking=no install/install_slave.sh root@$TARGET_IP:/root/
 

@@ -12,7 +12,7 @@ if [ -f "${SCRIPT_DIR}/venv/bin/activate" ]; then
 else
     echo "⚠️ venv не найден, создаем..."
     cd "${SCRIPT_DIR}"
-    python3 -m venv venv
+    python3 -m venv venv --system-site-packages
     source venv/bin/activate
     pip install -r requirements.txt
 fi

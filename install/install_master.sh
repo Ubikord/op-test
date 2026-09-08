@@ -99,16 +99,29 @@ cd "$PROJECT_DIR"
 echo -e "${GREEN}✅ Рабочая директория: $(pwd)${NC}"
 
 # ============================================================
-# ШАГ 3: Установка Python зависимостей
+# ШАГ 3: Установка Python зависимостей и создание venv
 # ============================================================
 echo -e "${BLUE}[3/8] Установка Python зависимостей...${NC}"
 
-if [ -f "requirements.txt" ]; then
-    pip3 install -r requirements.txt
-    echo -e "${GREEN}✅ Python зависимости установлены${NC}"
-else
-    echo -e "${YELLOW}⚠️ requirements.txt не найден${NC}"
+# Устанавливаем PyQt5 глобально (для надежности)
+apt install -y python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtwebengine
+
+# Создаем venv с доступом к системным пакетам
+if [ ! -d "venv" ]; then
+    echo -e "${YELLOW}⚠️ Создание виртуального окружения...${NC}"
+    python3 -m venv venv --system-site-packages
+    echo -e "${GREEN}✅ venv создан с доступом к системным пакетам${NC}"
 fi
+
+# Активируем venv и устанавливаем pip-зависимости
+source venv/bin/activate
+pip install --upgrade pip
+if [ -f "requirements.txt" ]; then
+    pip install -r requirements.txt
+fi
+deactivate
+
+echo -e "${GREEN}✅ Python зависимости установлены${NC}"
 
 # ============================================================
 # ШАГ 4: Создание topology.json

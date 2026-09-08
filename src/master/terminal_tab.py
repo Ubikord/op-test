@@ -19,8 +19,8 @@ class SSHCommandThread(QThread):
     output_received = pyqtSignal(str, str)
     finished_signal = pyqtSignal(str, int)
     
-    def __init__(self, hostname: str, command: str, label: str = ""):
-        super().__init__()
+    def __init__(self, hostname: str, command: str, label: str = "", parent=None):
+        super().__init__(parent)
         self.hostname = hostname
         self.command = command
         self.label = label or hostname
@@ -236,7 +236,7 @@ class TerminalWidget(QWidget):
         self.terminal.moveCursor(QTextCursor.MoveOperation.End)
         
         # Создаём и запускаем новый поток
-        self.thread = SSHCommandThread(self.hostname, command, self.label)
+        self.thread = SSHCommandThread(self.hostname, command, self.label, self)
         self.thread.finished_signal.connect(self.on_finished)
         self.thread.output_received.connect(self.on_output)
         self.thread.start()
@@ -287,8 +287,12 @@ class TerminalWidget(QWidget):
     def closeEvent(self, event):
         """При закрытии виджета останавливаем поток."""
         if self.thread and self.thread.isRunning():
+            print(f"⏹ Остановка SSH потока для {self.label}")
             self.thread.stop()
-            self.thread.wait(3000)
+            if not self.thread.wait(3000):
+                self.thread.terminate()
+                self.thread.wait(1000)
+            self.thread = None
         event.accept()
 
 

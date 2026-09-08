@@ -1452,6 +1452,8 @@ class MainWindow(QMainWindow):
         # 3. ПОТОМ применяем топологию к UI
         self.apply_topology_to_ui()
 
+        self._migrate_groups_to_refs()
+
         # 4. ПОТОМ запускаем таймеры
         self.refresh_timer = QTimer()
         self.refresh_timer.timeout.connect(self.refresh_slaves)
@@ -1995,6 +1997,20 @@ class MainWindow(QMainWindow):
             print(f"❌ Ошибка: {e}")
             self.topology = {"slaves": {}}
 
+    def _migrate_groups_to_refs(self):
+        """Мигрирует старые группы (с EndpointRef) в новый формат (slave, iface)."""
+        migrated = False
+        for group_name, endpoints in list(self.groups.items()):
+            if endpoints and not isinstance(endpoints[0], tuple):
+                new_endpoints = [(ep.slave, ep.iface) for ep in endpoints]
+                self.groups[group_name] = new_endpoints
+                migrated = True
+                self.log_user(f"🔄 Группа '{group_name}' обновлена для работы с актуальными VLAN")
+            
+        if migrated:
+            self.refresh_group_iface_list()
+            self.update_group_iface_combo()
+
     # ------------------------------------------------------------------------
     # Управление интерфейсами
     # ------------------------------------------------------------------------
@@ -2452,9 +2468,18 @@ class MainWindow(QMainWindow):
             if g_name == group_name:
                 continue
             for ep in eps:
-                used_interfaces.add((ep.slave, ep.iface))
+                if isinstance(ep, tuple) and len(ep) == 2:
+                    used_interfaces.add((ep[0], ep[1]))
+                else:
+                    used_interfaces.add((ep.slave, ep.iface))
 
-        existing = {(ep.slave, ep.iface) for ep in self.groups[group_name]}
+        existing = set()
+        for ep in self.groups[group_name]:
+            if isinstance(ep, tuple) and len(ep) == 2:
+                existing.add((ep[0], ep[1]))
+            else:
+                existing.add((ep.slave, ep.iface))
+
         count = 0
         for (slave, iface) in self.all_endpoints():
             if (slave, iface) in existing or (slave, iface) in used_interfaces:
@@ -2471,15 +2496,21 @@ class MainWindow(QMainWindow):
         name = self.group_name_edit.currentText().strip()
         self.group_iface_list.clear()
         for ep in self.groups.get(name, []):
-            up = self.is_interface_up(ep.slave, ep.iface)
-            info = self.iface_status.get((ep.slave, ep.iface), {})
+            # Проверяем формат
+            if isinstance(ep, tuple) and len(ep) == 2:
+                slave, iface = ep
+            else:
+                slave, iface = ep.slave, ep.iface
+            
+            up = self.is_interface_up(slave, iface)
+            info = self.iface_status.get((slave, iface), {})
             vlans = info.get("vlans", [])
             vlan_str = f"[{', '.join(str(v) for v in vlans)}]" if vlans else "[нет VLAN]"
 
             if up:
-                item = QListWidgetItem(f"{ep.slave}:{ep.iface} {vlan_str}")
+                item = QListWidgetItem(f"{slave}:{iface} {vlan_str}")
             else:
-                item = QListWidgetItem(f"⚠ {ep.slave}:{ep.iface} {vlan_str} (недоступен)")
+                item = QListWidgetItem(f"⚠ {slave}:{iface} {vlan_str} (недоступен)")
                 item.setForeground(QColor("red"))
             self.group_iface_list.addItem(item)
 
@@ -2529,26 +2560,29 @@ class MainWindow(QMainWindow):
             return
         slave, iface = data
 
+        # Удаляем из других групп
         for g_name, eps in list(self.groups.items()):
             if g_name == name:
                 continue
             for ep in eps:
-                if ep.slave == slave and ep.iface == iface:
+                # Проверяем формат
+                if isinstance(ep, tuple) and len(ep) == 2:
+                    ep_slave, ep_iface = ep
+                else:
+                    ep_slave, ep_iface = ep.slave, ep.iface
+                if ep_slave == slave and ep_iface == iface:
                     eps.remove(ep)
                     self.log_debug(f"🔄 Интерфейс {slave}:{iface} перемещён из группы '{g_name}' в '{name}'")
                     break
 
-        try:
-            endpoint = self.make_endpoint((slave, iface))
-            self.groups[name].append(endpoint)
-            info = self.iface_status.get((slave, iface), {})
-            vlans = info.get("vlans", [])
-            vlan_str = f"VLAN {', '.join(str(v) for v in vlans)}" if vlans else "нет VLAN"
-            self.log_user(f"➕ Добавлен {slave}:{iface} ({vlan_str}) в группу '{name}'")
-            self.refresh_group_iface_list()
-            self.update_group_iface_combo()
-        except RuntimeError as e:
-            QMessageBox.warning(self, "Внимание", str(e))
+        # Добавляем как ссылку (slave, iface)
+        self.groups[name].append((slave, iface))
+        info = self.iface_status.get((slave, iface), {})
+        vlans = info.get("vlans", [])
+        vlan_str = f"VLAN {', '.join(str(v) for v in vlans)}" if vlans else "нет VLAN"
+        self.log_user(f"➕ Добавлен {slave}:{iface} ({vlan_str}) в группу '{name}'")
+        self.refresh_group_iface_list()
+        self.update_group_iface_combo()
 
     def on_remove_iface_from_group(self):
         name = self.group_name_edit.currentText().strip()
@@ -2559,7 +2593,10 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Внимание", "Выберите интерфейс для удаления")
             return
         ep = self.groups[name].pop(current_row)
-        self.log_user(f"🗑 Удалён {ep.slave}:{ep.iface} из группы '{name}'")
+        if isinstance(ep, tuple) and len(ep) == 2:
+            self.log_user(f"🗑 Удалён {ep[0]}:{ep[1]} из группы '{name}'")
+        else:
+            self.log_user(f"🗑 Удалён {ep.slave}:{ep.iface} из группы '{name}'")
         self.refresh_group_iface_list()
         self.update_group_iface_combo()
 
@@ -2578,13 +2615,25 @@ class MainWindow(QMainWindow):
         for group_name, endpoints in self.groups.items():
             data["groups"][group_name] = []
             for ep in endpoints:
-                data["groups"][group_name].append({
-                    "slave": ep.slave,
-                    "host": ep.host,
-                    "iface": ep.iface,
-                    "mac": ep.mac,
-                    "vlans": ep.vlans
-                })
+                if isinstance(ep, tuple) and len(ep) == 2:
+                    slave, iface = ep
+                    # Получаем актуальные данные из топологии
+                    ep_obj = self.get_actual_endpoint(slave, iface)
+                    data["groups"][group_name].append({
+                        "slave": ep_obj.slave,
+                        "host": ep_obj.host,
+                        "iface": ep_obj.iface,
+                        "mac": ep_obj.mac,
+                        "vlans": ep_obj.vlans
+                    })
+                else:
+                    data["groups"][group_name].append({
+                        "slave": ep.slave,
+                        "host": ep.host,
+                        "iface": ep.iface,
+                        "mac": ep.mac,
+                        "vlans": ep.vlans
+                    })
 
         try:
             with open(file_path, "w", encoding="utf-8") as f:
@@ -2593,6 +2642,18 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Готово", f"Группы сохранены в {file_path}")
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить группы: {e}")
+
+    def get_actual_endpoint(self, slave: str, iface: str) -> EndpointRef:
+        """Получает актуальный EndpointRef из топологии."""
+        slave_cfg = self.topology.get("slaves", {}).get(slave, {})
+        iface_cfg = slave_cfg.get("interfaces", {}).get(iface, {})
+        return EndpointRef(
+            slave=slave,
+            host=slave_cfg.get("host", ""),
+            iface=iface,
+            mac=iface_cfg.get("mac", ""),
+            vlans=iface_cfg.get("vlans", [])
+        )
 
     def load_groups(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -2627,17 +2688,8 @@ class MainWindow(QMainWindow):
                 endpoints = []
                 for ep_data in endpoints_data:
                     try:
-                        ep = EndpointRef(
-                            slave=ep_data["slave"],
-                            host=ep_data["host"],
-                            iface=ep_data["iface"],
-                            mac=ep_data["mac"],
-                            vlans=ep_data.get("vlans", [])
-                        )
-                        slave_cfg = self.topology.get("slaves", {}).get(ep.slave, {})
-                        iface_cfg = slave_cfg.get("interfaces", {}).get(ep.iface, {})
-                        ep.vlans = iface_cfg.get("vlans", [])
-                        endpoints.append(ep)
+                        # Сохраняем как кортеж (slave, iface)
+                        endpoints.append((ep_data["slave"], ep_data["iface"]))
                     except KeyError:
                         continue
 
@@ -2886,7 +2938,16 @@ class MainWindow(QMainWindow):
         if not group_name or group_name not in self.groups:
             QMessageBox.warning(self, "Внимание", "Выберите существующую группу")
             return
-        endpoints = self.groups[group_name]
+        
+        # Получаем актуальные EndpointRef из топологии
+        endpoints = []
+        for ep in self.groups[group_name]:
+            if isinstance(ep, tuple) and len(ep) == 2:
+                ep_obj = self.get_actual_endpoint(ep[0], ep[1])
+                endpoints.append(ep_obj)
+            else:
+                endpoints.append(ep)
+        
         if len(endpoints) < 2:
             QMessageBox.warning(self, "Внимание", "В группе должно быть минимум 2 интерфейса")
             return
@@ -3377,10 +3438,19 @@ class MainWindow(QMainWindow):
             # Если группа не найдена, ищем по VLAN
             for g_name, eps in self.groups.items():
                 for ep in eps:
-                    if common_vlan in ep.vlans:
-                        endpoints = eps
-                        group_name = g_name
-                        break
+                    # Проверяем формат ep
+                    if isinstance(ep, tuple) and len(ep) == 2:
+                        slave, iface = ep
+                        ep_obj = self.get_actual_endpoint(slave, iface)
+                        if common_vlan in ep_obj.vlans:
+                            endpoints = eps
+                            group_name = g_name
+                            break
+                    else:
+                        if common_vlan in ep.vlans:
+                            endpoints = eps
+                            group_name = g_name
+                            break
                 if endpoints:
                     break
 
@@ -3392,8 +3462,15 @@ class MainWindow(QMainWindow):
         # Строим словарь нормализованных MAC -> EndpointRef
         mac_to_interface = {}
         for ep in endpoints:
-            if ep.mac:
-                mac_to_interface[self.normalize_mac(ep.mac)] = ep
+            # Проверяем формат ep
+            if isinstance(ep, tuple) and len(ep) == 2:
+                slave, iface = ep
+                ep_obj = self.get_actual_endpoint(slave, iface)
+                if ep_obj.mac:
+                    mac_to_interface[self.normalize_mac(ep_obj.mac)] = ep_obj
+            else:
+                if ep.mac:
+                    mac_to_interface[self.normalize_mac(ep.mac)] = ep
 
         # Сопоставляем sender_stats с интерфейсами
         filtered_stats = []
@@ -3428,7 +3505,7 @@ class MainWindow(QMainWindow):
         )
         layout.addWidget(label)
 
-        # ========== ДОБАВЛЯЕМ ФУНКЦИЮ ПРОВЕРКИ ОШИБОК ==========
+        # Проверка ошибок
         error_fields = (
             "rx_errors", "tx_errors", "rx_dropped", "tx_dropped",
             "rx_fifo_errors", "tx_fifo_errors", "rx_over_errors",
@@ -3440,18 +3517,16 @@ class MainWindow(QMainWindow):
         def has_issue(stats):
             return any((stats.get(f) or 0) > 0 for f in error_fields)
         
-        # Проверяем ошибки у receiver
         receiver_has_issue = has_issue(receiver_nic_stats)
-        # ========================================================
 
-        table = QTableWidget(len(filtered_stats), 8)  # увеличиваем количество колонок
+        table = QTableWidget(len(filtered_stats), 8)
         table.setHorizontalHeaderLabels([
             "Sender",
-            "Отправлено",      # packets_sent от sender'а
-            "Байт отправ.",    # bytes_sent от sender'а
-            "Получено",        # packets_received от receiver'а
-            "Байт получ.",     # bytes_received от receiver'а
-            "Потери %",        # (packets_sent - packets_received) / packets_sent * 100
+            "Отправлено",
+            "Байт отправ.",
+            "Получено",
+            "Байт получ.",
+            "Потери %",
             "Out of Order",
             "NIC"
         ])
@@ -3465,20 +3540,21 @@ class MainWindow(QMainWindow):
             packets_received = stat.get("packets_received", 0)
             bytes_received = stat.get("bytes_received", 0) + packets_received * 4
             lost = max(stat.get("packets_lost", 0), packets_sent - packets_received)
-            lost_pct = (lost / packets_sent) * 100.0
+            lost_pct = (lost / packets_sent) * 100.0 if packets_sent > 0 else 0.0
             out_of_order = stat.get("out_of_order", 0)
+            
             if ep is not None:
-                sender_name = f"{ep.slave}:{ep.iface}"
+                if isinstance(ep, tuple) and len(ep) == 2:
+                    sender_name = f"{ep[0]}:{ep[1]}"
+                else:
+                    sender_name = f"{ep.slave}:{ep.iface}"
             else:
                 sender_name = mac
 
             # Проверяем ошибки у sender'а (TX)
             tx_stats = sender_tx_stats.get(mac, {})
             sender_has_issue = has_issue(tx_stats)
-            
-            # ========== ИСПРАВЛЕНИЕ: комбинируем ошибки sender и receiver ==========
             nic_issue = receiver_has_issue or sender_has_issue
-            # ======================================================================
 
             table.setItem(idx, 0, QTableWidgetItem(sender_name))
             table.setItem(idx, 1, QTableWidgetItem(f"{packets_sent:,}"))
@@ -3495,7 +3571,13 @@ class MainWindow(QMainWindow):
             mac = stat.get("mac", "")
             # Находим имя sender'а
             ep = mac_to_interface.get(self.normalize_mac(mac))
-            sender_name = f"{ep.slave}:{ep.iface}" if ep else mac
+            if ep is not None:
+                if isinstance(ep, tuple) and len(ep) == 2:
+                    sender_name = f"{ep[0]}:{ep[1]}"
+                else:
+                    sender_name = f"{ep.slave}:{ep.iface}"
+            else:
+                sender_name = mac
             # Получаем TX статистику для этого sender'а
             tx_stats = sender_tx_stats.get(mac, {})
             # RX статистика receiver'а (уже отфильтрована)

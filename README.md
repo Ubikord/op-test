@@ -13,33 +13,34 @@ cd op-test && \
 chmod +x install/install_master.sh && \
 sudo ./install/install_master.sh
 ```
+
 ## Установка Slave (Orange Pi R2S)
-1. Первичная настройка сети
-Подключитесь к R2S по IP: 192.168.2.1 (логин: root, пароль: orangepi)
-Перейдите в Network → Interfaces
-Настройте LAN (управляющий интерфейс):
-- Device: eth1 (Ethernet Adapter)
-- IPv4 address: 192.168.2.X, где X — номер устройства (1, 2, 3...)
-- Нажмите Save
 
-Удалите все интерфейсы WAN (если есть)
+Установка выполняется в **два этапа**:
+1. **Первичная настройка сети** — `bootstrap_network.sh`
+2. **Установка софта** — `add_slave.sh`
 
-Создайте новый интерфейс для интернета (eth0):
-- Name: eth0
-- Protocol: DHCP client
-- Device: eth0 (Ethernet Adapter)
-- Нажмите Create interface → Save & Apply
+---
+
+### Этап 1: Первичная настройка сети
+На **Master** выполните:
+```bash
+cd op-test
+./install/bootstrap_network.sh X
+```
+,где X — номер устройства (1, 2, 3...)
 
 Переключитесь на новый IP: 192.168.2.X в браузере
 Перезагрузите R2S (чтобы тестовые интерфейсы поднялись)
 
-2. Установка софта на Slave (с Master)
-На Master выполните:
+### Этап 2: Установка софта на Slave
+На **Master** выполните:
 ```bash
-cd /root/op-test
+cd op-test
 ./install/add_slave.sh X
-где X — номер устройства (1, 2, 3...)
 ```
+,где X — номер устройства (1, 2, 3...)
+
 Альтернативный способ (вручную на R2S):
 ```bash
 wget --no-check-certificate -O op-test.tar.gz https://github.com/Ubikord/op-test/archive/refs/heads/main.tar.gz && \

@@ -37,6 +37,8 @@ def run_pair_test(
     packet_count: int = 0,
     dst_mac_override: str = None,
     dst_type: int = 0,
+    port_speed_mbps: Optional[float] = None,
+    actual_rate_pps: Optional[float] = None,
 ) -> dict:
     # === ГЕНЕРИРУЕМ test_id САМЫМ ПЕРВЫМ ===
     test_id = str(uuid.uuid4())[:8]
@@ -90,10 +92,12 @@ def run_pair_test(
 
     # Ждём результаты
     max_wait = 120.0
+    effective_pps = actual_rate_pps if actual_rate_pps and actual_rate_pps > 0 else rate_pps
     if packet_count is not None and packet_count > 0:
-        max_wait = (packet_count / max(rate_pps, 1)) + 30.0
+        effective_pps = actual_rate_pps if actual_rate_pps else rate_pps
+        max_wait = (packet_count / max(effective_pps, 1)) * 1.5 + 60.0
     else:
-        max_wait = duration_s + 30.0
+        max_wait = duration_s * 1.5 + 60.0
 
     try:
         sender_result = wait_for_result(sender_client, send_test_id, max_wait=max_wait)
@@ -263,6 +267,7 @@ def run_pair_test(
         "common_vlan": common_vlan,
         "dst_type": dst_type,
         "sender_stats": sender_stats,
+        "actual_rate_pps": actual_rate_pps,
         "sender": {
             "slave": sender.slave,
             "iface": sender.iface,
@@ -299,6 +304,42 @@ def run_pair_test(
     
     return result
 
+def estimate_test_duration(
+    params: dict,
+    found_rate_pps: float,
+    port_speed_mbps: Optional[float] = None,
+) -> float:
+    """
+    Оценивает длительность финального теста с учётом пропускной способности порта.
+
+    Для теста по количеству пакетов:
+        t = max(packet_count / rate, packet_count * frame_size * 8 / port_bps)
+
+    frame_size берётся из wire_* (включает FCS, без преамбулы/IFG).
+    """
+    packet_count = params.get("packet_count", 0) or 0
+    if packet_count <= 0:
+        return float(params.get("duration_s", 5.0))
+
+    t_rate = packet_count / max(found_rate_pps, 1)
+
+    if port_speed_mbps and port_speed_mbps > 0:
+        if params.get("size_mode") == "random":
+            if "wire_min" in params and "wire_max" in params:
+                frame_size = (float(params["wire_min"]) + float(params["wire_max"])) / 2.0
+            else:
+                frame_size = (
+                    float(params.get("size_min", 64)) + float(params.get("size_max", 1500))
+                ) / 2.0 + 4.0
+        else:
+            if "wire_size" in params:
+                frame_size = float(params["wire_size"])
+            else:
+                frame_size = float(params.get("size", 512)) + 4.0
+        t_port = packet_count * frame_size * 8.0 / (port_speed_mbps * 1e6)
+        return max(t_rate, t_port)
+
+    return t_rate
 
 def run_group_test(
     endpoints: list,
@@ -333,3 +374,56 @@ def run_group_test(
         results.append(result)
 
     return results
+
+def estimate_test_duration(
+    params: dict,
+    found_rate_pps: float,
+    port_speed_mbps: Optional[float] = None,
+) -> float:
+    """Для одиночного/парного теста. Как было."""
+    packet_count = params.get("packet_count", 0) or 0
+    if packet_count <= 0:
+        return float(params.get("duration_s", 5.0))
+
+    t_rate = packet_count / max(found_rate_pps, 1)
+
+    if port_speed_mbps and port_speed_mbps > 0:
+        frame_size = _wire_frame_size(params)
+        t_port = packet_count * frame_size * 8.0 / (port_speed_mbps * 1e6)
+        return max(t_rate, t_port)
+    return t_rate
+
+
+def _wire_frame_size(params: dict) -> float:
+    if params.get("size_mode") == "random":
+        if "wire_min" in params and "wire_max" in params:
+            return (float(params["wire_min"]) + float(params["wire_max"])) / 2.0
+        return (float(params.get("size_min", 64)) + float(params.get("size_max", 1500))) / 2.0 + 4.0
+    if "wire_size" in params:
+        return float(params["wire_size"])
+    return float(params.get("size", 512)) + 4.0
+
+def estimate_multicast_duration(
+    params: dict,
+    found_rate_pps: float,
+    endpoints: list,
+    port_speeds: dict,
+) -> float:
+    packet_count = params.get("packet_count", 0) or 0
+    if packet_count <= 0:
+        return float(params.get("duration_s", 5.0))
+
+    t_rate = packet_count / max(found_rate_pps, 1)
+
+    speeds = []
+    for ep in endpoints:
+        s = port_speeds.get((ep.slave, ep.iface))
+        if s and s > 0:
+            speeds.append(float(s))
+    if not speeds:
+        return t_rate
+
+    frame_size = _wire_frame_size(params)
+    # Самый медленный порт определяет общее время
+    t_port = packet_count * frame_size * 8.0 / (min(speeds) * 1e6)
+    return max(t_rate, t_port)

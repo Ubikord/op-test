@@ -4,6 +4,7 @@ protocol_client.py
 """
 from __future__ import annotations
 
+import time
 import sys
 from pathlib import Path
 
@@ -61,43 +62,23 @@ class AgentClient:
         return resp
 
 
-def wait_for_result(client: AgentClient, test_id: str, poll_interval: float = 0.5, max_wait: float = 120.0) -> dict:
-    """
-    Ожидает завершения теста и возвращает результат.
-    ВСЕГДА возвращает dict, даже при таймауте.
-    """
-    import time
+def wait_for_result(client, test_id, poll_interval=0.5, max_wait=120.0,
+                    hard_limit_factor=3.0, progress_cb=None):
+    soft_wait = max_wait
+    hard_wait = max_wait * hard_limit_factor
     waited = 0.0
-    last_resp = None
-    
-    while waited < max_wait:
+    while waited < hard_wait:
         try:
             resp = client.get_result(test_id)
-            last_resp = resp
             if resp.get("finished"):
-                result = resp.get("result")
-                if result is not None:
-                    return result
-                # Если result есть, но None, продолжаем ждать
-        except Exception as e:
-            print(f"⚠️ [wait_for_result] Ошибка: {e}")
+                return resp.get("result") or {}
+        except Exception:
+            pass
+        
+        if waited > soft_wait and progress_cb and int(waited) % 30 == 0:
+            progress_cb(f"⏳ Тест {test_id} всё ещё выполняется, прошло {int(waited)} с")
         
         time.sleep(poll_interval)
         waited += poll_interval
     
-    # === ТАЙМАУТ: возвращаем последний ответ или фиктивный результат ===
-    print(f"⚠️ [wait_for_result] Таймаут для {test_id} ({max_wait} сек)")
-    
-    if last_resp and last_resp.get("result") is not None:
-        return last_resp["result"]
-    
-    # Если ничего нет, возвращаем пустой результат с пометкой о таймауте
-    return {
-        "status": "error",
-        "message": f"Таймаут {max_wait} сек",
-        "packets_sent": 0,
-        "bytes_sent": 0,
-        "duration_s": 0,
-        "nic_stats_delta": {},
-        "_timeout": True
-    }
+    return {"status": "error", "message": f"Таймаут {hard_wait} сек", "_timeout": True}

@@ -57,7 +57,7 @@ def find_max_no_loss_rate(
     # Если пакетов не отправлено или потери 100%
     if packets_sent == 0 or (packets_lost > 0 and packets_lost >= packets_sent):
         return RateSearchResult(
-            rate_pps=low,
+            rate_pps=high,
             last_trial_result=trial_low,
             iterations=iterations,
             no_common_vlan=True  # <-- 100% потери = нет общего VLAN
@@ -65,9 +65,9 @@ def find_max_no_loss_rate(
     
     if trial_low.get("packets_lost", 0) > 0:
         # Если на минимальной скорости есть потери, но не 100%
-        # Возвращаем минимальную скорость
+        # Возвращаем максимальную скорость
         return RateSearchResult(
-            rate_pps=low,
+            rate_pps=high,
             last_trial_result=trial_low,
             iterations=iterations,
             no_common_vlan=False

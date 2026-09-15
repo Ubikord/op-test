@@ -30,7 +30,11 @@
 
 /* Увеличенные буферы сокетов */
 #define RCV_BUF_SIZE (32 * 1024 * 1024)  /* 32 МБ */
-#define SND_BUF_SIZE (16 * 1024 * 1024)  /* 16 МБ */
+#define SND_BUF_SIZE (256 * 1024)  /* 256 КБ */
+
+#ifndef PACKET_QDISC_BYPASS
+#define PACKET_QDISC_BYPASS 20
+#endif
 
 static volatile sig_atomic_t g_stop = 0;
 
@@ -153,8 +157,10 @@ static int run_sender(const Args *a) {
 
     /* Увеличиваем буфер отправки */
     int sndbuf = SND_BUF_SIZE;
-    if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf)) < 0) {
-        perror("setsockopt SO_SNDBUF");
+    int qdisc_bypass = 1;
+    if (setsockopt(sock, SOL_PACKET, PACKET_QDISC_BYPASS,
+                   &qdisc_bypass, sizeof(qdisc_bypass)) < 0) {
+        perror("setsockopt PACKET_QDISC_BYPASS");
     }
 
     int ifindex = get_iface_index(sock, a->iface);
@@ -183,7 +189,6 @@ static int run_sender(const Args *a) {
     uint64_t interval_ns = a->rate_pps > 0 ? (uint64_t)(1000000000.0 / (double)a->rate_pps) : 0;
     uint64_t t_start = now_ns();
     uint64_t t_end = a->duration_s > 0 ? t_start + (uint64_t)(a->duration_s * 1e9) : 0;
-    uint64_t next_send = t_start;
     uint64_t target_packets = a->packet_count;
 
     while (!g_stop) {
@@ -213,14 +218,11 @@ static int run_sender(const Args *a) {
         memcpy(buf + ETH_HDR_LEN + 8, &seq_be, 8);
         memcpy(buf + SENDER_MAC_OFFSET, src_mac, 6);
 
-
         ssize_t sent = sendto(sock, buf, (size_t)frame_len, 0,
-                               (struct sockaddr *)&saddr, sizeof(saddr));
+                            (struct sockaddr *)&saddr, sizeof(saddr));
         if (sent < 0) {
-            /* Просто сообщаем об ошибке, но не зацикливаемся */
             if (errno == ENOBUFS || errno == EAGAIN) {
-                // небольшая пауза, чтобы не спамить ошибками
-                struct timespec req = {0, 1000000}; // 1 мс
+                struct timespec req = {0, 1000000};
                 nanosleep(&req, NULL);
                 continue;
             }
@@ -233,16 +235,23 @@ static int run_sender(const Args *a) {
         seq++;
 
         if (interval_ns > 0) {
-            next_send += interval_ns;
-            uint64_t now = now_ns();
-            if (next_send > now) {
-                struct timespec req;
-                uint64_t diff = next_send - now;
-                req.tv_sec = diff / 1000000000ULL;
-                req.tv_nsec = diff % 1000000000ULL;
-                nanosleep(&req, NULL);
-            } else {
-                next_send = now;
+            // Абсолютный момент следующей отправки
+            uint64_t target_ns = t_start + packets_sent * interval_ns;
+            uint64_t now2 = now_ns();
+            if (target_ns > now2) {
+                // Если до цели > 50 мкс, спим; иначе busy-wait
+                uint64_t diff = target_ns - now2;
+                if (diff > 50000) {   // 50 мкс
+                    struct timespec req;
+                    req.tv_sec  = target_ns / 1000000000ULL;
+                    req.tv_nsec = target_ns % 1000000000ULL;
+                    // TIMER_ABSTIME: спим до абсолютного момента,
+                    // ошибка не накапливается
+                    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &req, NULL);
+                } else {
+                    // busy-wait — точнее, чем nanosleep на малых интервалах
+                    while (now_ns() < target_ns) { /* spin */ }
+                }
             }
         }
     }

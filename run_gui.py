@@ -25,7 +25,7 @@ from PyQt5.QtWidgets import (
 )
 
 from src.master.protocol_client import AgentClient, wait_for_result
-from src.master.test_runner import EndpointRef, run_pair_test, run_group_test, find_common_vlan
+from src.master.test_runner import EndpointRef, run_pair_test, run_group_test, find_common_vlan, estimate_test_duration, estimate_multicast_duration
 from src.master.rate_search import find_max_no_loss_rate
 from src.master.terminal_tab import TerminalTab
 from src.master.console_tab import ConsoleTab
@@ -43,7 +43,7 @@ class TestWorker(QThread):
     log_message = pyqtSignal(str)
     autoprobe_started = pyqtSignal()
     autoprobe_finished = pyqtSignal()
-    def __init__(self, sender: EndpointRef, receiver: EndpointRef, params: dict, group_name: str = "", dst_mac_override: str = None, dst_type: int = 0):
+    def __init__(self, sender: EndpointRef, receiver: EndpointRef, params: dict, group_name: str = "", dst_mac_override: str = None, dst_type: int = 0, port_speed_mbps=None):
         super().__init__()
         self.sender = sender
         self.receiver = receiver
@@ -54,6 +54,7 @@ class TestWorker(QThread):
         self._stop_requested = False
         self._sender_client = None
         self._receiver_client = None
+        self.port_speed_mbps = port_speed_mbps
     
     def stop(self):
         self._stop_requested = True
@@ -100,7 +101,15 @@ class TestWorker(QThread):
                     )
                     sent = res["sender"].get("packets_sent", 0)
                     lost = res["receiver"].get("packets_lost", 0)
-                    return {"packets_sent": sent, "packets_lost": lost, "_full": res}
+                    sr = res.get("sender", {})
+                    dur = sr.get("duration_s", 0) or 0
+                    actual_pps = (sent / dur) if sent > 0 and dur > 0 else None
+                    return {
+                        "packets_sent": sent,
+                        "packets_lost": lost,
+                        "actual_pps_min": actual_pps,
+                        "_full": res,
+                    }
                 
                 search = find_max_no_loss_rate(
                     trial,
@@ -109,23 +118,33 @@ class TestWorker(QThread):
                 )
                 
                 found_rate = search.rate_pps
+                actual_pps_min = search.last_trial_result.get("actual_pps_min")
+
+                if actual_pps_min and actual_pps_min > 0 and actual_pps_min < found_rate:
+                    rate_to_use = int(actual_pps_min)
+                    #self.log_message.emit(
+                    #    f"ℹ️ pktgen не выдержал {found_rate} pps, "
+                    #    f"ограничиваем до фактического {rate_to_use} pps"
+                    #)
+                else:
+                    rate_to_use = found_rate
 
                 from datetime import datetime, timedelta
 
-                if self.params.get("packet_count", 0) > 0:
-                    seconds = self.params["packet_count"] / max(found_rate, 1)
+                packet_count = self.params.get("packet_count") or 0
+                if packet_count > 0:
+                    seconds = packet_count / max(rate_to_use, 1)
                 else:
-                    seconds = self.params.get("duration_s", 5.0)
-
+                    seconds = float(self.params.get("duration_s", 5.0))
                 eta = datetime.now() + timedelta(seconds=seconds)
                 eta_str = eta.strftime("%H:%M:%S")
 
                 # Вывод в лог через отдельный сигнал
-                self.log_message.emit(f"✅ Найдена скорость: {found_rate} pps (за {search.iterations} итераций)")
+                self.log_message.emit(f"✅ Найдена скорость: {rate_to_use} pps (за {search.iterations} итераций)")
                 self.log_message.emit(f"⏳ Тест запущен, завершится в {eta_str}")
 
                 # Статусная строка (кратко)
-                self.progress.emit(f"✅ Найдена скорость: {found_rate} pps, тест завершится в {eta_str}")
+                self.progress.emit(f"✅ Найдена скорость: {rate_to_use} pps, тест завершится в {eta_str}")
 
                 if search.no_common_vlan:
                     self.progress.emit(f"⚠️ 100% потерь на минимальной скорости ({found_rate} pps) - вероятно, нет общего VLAN")
@@ -134,20 +153,20 @@ class TestWorker(QThread):
                     # Извлекаем полный результат из пробного теста
                     if "_full" in trial_result:
                         result = trial_result["_full"]
-                        result["auto_rate_pps"] = found_rate
+                        result["auto_rate_pps"] = rate_to_use
                         result["auto_rate_iterations"] = search.iterations
                         result["no_common_vlan"] = True
                         self.finished_ok.emit(result)
                         return
                     else:
                         # Если нет полного результата, запускаем финальный тест с минимальной скоростью
-                        found_rate = self.params.get("rate_min", 1000)
+                        rate_to_use = self.params.get("rate_min", 1000)
                         self.progress.emit(f"ℹ️ Запуск финального теста с минимальной скоростью {found_rate} pps")
-                        rate_to_use = found_rate
+                        rate_to_use = rate_to_use
                         auto_rate_result = True
                 else:
-                    self.progress.emit(f"✅ Найдена скорость: {found_rate} pps")
-                    rate_to_use = found_rate
+                    self.progress.emit(f"✅ Найдена скорость: {rate_to_use} pps")
+                    rate_to_use = rate_to_use
                     auto_rate_result = True
                 
                 self.autoprobe_finished.emit()
@@ -200,8 +219,8 @@ class TestWorker(QThread):
 
             # Ждём результаты
             if self.params.get("packet_count", 0):
-                theoretical_time = self.params["packet_count"] / max(self.params["rate_pps"], 1)
-                max_wait = theoretical_time * 1.2 + 60.0  # 20% запас + 60 секунд
+                theoretical_time = estimate_test_duration(self.params, rate_to_use, self.port_speed_mbps)
+                max_wait = theoretical_time * 1.2 + 60.0
             else:
                 max_wait = self.params.get("duration_s", 5.0) * 1.2 + 60.0
 
@@ -340,6 +359,11 @@ class TestWorker(QThread):
                 result = {
                     "test_id": test_id,
                     "rate_pps": rate_to_use,
+                    "actual_rate_pps": (
+                        sender_packets / sender_result.get("duration_s", 1)
+                        if sender_result and sender_result.get("duration_s", 0) > 0
+                        else None
+                    ),
                     "common_vlan": common_vlan,
                     "dst_type": self.dst_type,
                     "mac": self.sender.mac,
@@ -371,9 +395,10 @@ class GroupTestSignals(QObject):
     all_finished = pyqtSignal()
     progress = pyqtSignal(str)
     log_message = pyqtSignal(str)
+    autoprobe_done = pyqtSignal()
 
 class GroupTestRunnable(QRunnable):
-    def __init__(self, sender, receiver, params, group_name, test_index, total_tests, dst_mac_override: str = None, dst_type: int = 0):
+    def __init__(self, sender, receiver, params, group_name, test_index, total_tests, dst_mac_override: str = None, dst_type: int = 0, port_speed_mbps=None, parent_worker=None):
         super().__init__()
         self.sender = sender
         self.receiver = receiver
@@ -385,11 +410,14 @@ class GroupTestRunnable(QRunnable):
         self.dst_mac_override = dst_mac_override
         self.signals = GroupTestSignals()
         self._stop_requested = False
+        self.port_speed_mbps = port_speed_mbps
+        self.parent_worker = parent_worker
 
     def stop(self):
         self._stop_requested = True
 
     def run(self):
+        autoprobe_done_emitted = False
         try:
             if self.params.get("auto_rate"):
                 print("DEBUG: Запуск автоподбора скорости")
@@ -404,11 +432,20 @@ class GroupTestRunnable(QRunnable):
                         duration_s=self.params["probe_duration_s"],
                         dst_mac_override=self.dst_mac_override,
                         dst_type=self.dst_type,
+                        port_speed_mbps=self.port_speed_mbps,
                     )
                     sent = res["sender"].get("packets_sent", 0)
                     lost = res["receiver"].get("packets_lost", 0)
+                    sr = res.get("sender", {})
+                    dur = sr.get("duration_s", 0) or 0
+                    actual_pps = (sent / dur) if sent > 0 and dur > 0 else None
                     print(f"DEBUG: trial() результат: sent={sent}, lost={lost}")
-                    return {"packets_sent": sent, "packets_lost": lost, "_full": res}
+                    return {
+                        "packets_sent": sent,
+                        "packets_lost": lost,
+                        "actual_pps_min": actual_pps,   # <-- для unicast sender один
+                        "_full": res,
+                    }
                 
                 search = find_max_no_loss_rate(
                     trial,
@@ -419,36 +456,64 @@ class GroupTestRunnable(QRunnable):
                 print(f"DEBUG: search.rate_pps = {search.rate_pps}")
                 print(f"DEBUG: search.iterations = {search.iterations}")
                 print(f"DEBUG: search.last_trial_result = {search.last_trial_result}")
-          
-                # Используем найденную скорость
                 found_rate = search.rate_pps
+                actual_pps_min = search.last_trial_result.get("actual_pps_min")
+                if actual_pps_min and actual_pps_min > 0 and actual_pps_min < found_rate:
+                    rate_to_use = int(actual_pps_min)
+                    #self.signals.log_message.emit(
+                    #    f"ℹ️ pktgen не выдержал {found_rate} pps, "
+                    #    f"ограничиваем до фактического {rate_to_use} pps"
+                    #)
+                else:
+                    rate_to_use = found_rate
+
                 from datetime import datetime, timedelta
 
-                if self.params.get("packet_count", 0) > 0:
-                    seconds = self.params["packet_count"] / max(found_rate, 1)
-                else:
-                    seconds = self.params.get("duration_s", 5.0)
+                # Автоподбор вернул «нет VLAN» — тест всё равно запустится, но ETA не имеет смысла
+                if search.no_common_vlan:
+                    self.signals.log_message.emit(
+                        f"⚠️ [Группа] Автоподбор на {rate_to_use} pps: нет общего VLAN"
+                    )
 
+                seconds = estimate_test_duration(self.params, rate_to_use, self.port_speed_mbps)
                 eta = datetime.now() + timedelta(seconds=seconds)
                 eta_str = eta.strftime("%H:%M:%S")
 
-                # Вывод в лог через сигнал
-                self.signals.log_message.emit(f"✅ [Группа] Найдена скорость: {found_rate} pps (за {search.iterations} итераций)")
-                self.signals.log_message.emit(f"⏳ [Группа] Тест {self.test_index}/{self.total_tests} запущен, завершится в {eta_str}")
+                mode_str = "по пакетам" if self.params.get("packet_count", 0) > 0 else "по времени"
+                speed_str = f"{self.port_speed_mbps:.0f} Мбит/с" if self.port_speed_mbps else "порт ?"
 
-                print(f"DEBUG: found_rate = {found_rate}")
+                msg1 = (f"✅ [Группа] Найдена скорость: {rate_to_use} pps "
+                        f"(за {search.iterations} итераций, {mode_str}, {speed_str})")
+                msg2 = (f"⏳ [Группа] Тест {self.test_index}/{self.total_tests}: "
+                        f"~{seconds:.1f} с, завершится в {eta_str}")
+
+                self._log(msg1)
+                self._log(msg2)
+                self._progress(msg2)
+
+                self.signals.autoprobe_done.emit()
+                autoprobe_done_emitted = True
+                # Вывод в лог через сигнал
+                #self.signals.log_message.emit(f"✅ [Группа] Найдена скорость: {found_rate} pps (за {search.iterations} итераций)")
+                #self.signals.log_message.emit(f"⏳ [Группа] Тест {self.test_index}/{self.total_tests} запущен, завершится в {eta_str}")
+
+                print(f"DEBUG: rate_to_use = {rate_to_use}")
+                self.signals.autoprobe_done.emit()
+                autoprobe_done_emitted = True
                 result = run_pair_test(
                     self.sender, self.receiver,
                     self.params["size_mode"], self.params["size"],
                     self.params["size_min"], self.params["size_max"],
-                    found_rate,  # <-- используем найденную скорость
+                    rate_to_use,  # <-- используем найденную скорость
                     duration_s=self.params.get("duration_s"),
                     packet_count=self.params.get("packet_count"),
                     dst_mac_override=self.dst_mac_override,
                     dst_type=self.dst_type,
+                    port_speed_mbps=self.port_speed_mbps,
+                    actual_rate_pps=rate_to_use,
                 )
                 print(f"DEBUG: результат основного теста: rate_pps={result.get('rate_pps')}")
-                result["auto_rate_pps"] = found_rate
+                result["auto_rate_pps"] = rate_to_use
                 result["auto_rate_iterations"] = search.iterations
             else:
                 result = run_pair_test(
@@ -460,6 +525,7 @@ class GroupTestRunnable(QRunnable):
                     packet_count=self.params.get("packet_count"),
                     dst_mac_override=self.dst_mac_override,
                     dst_type=self.dst_type,
+                    port_speed_mbps=self.port_speed_mbps,
                 )
             if result is None or not isinstance(result, dict):
                 # Создаем результат из того, что есть
@@ -516,8 +582,17 @@ class GroupTestRunnable(QRunnable):
         except Exception as e:
             self.signals.error.emit(str(e))
         finally:
+            if self.params.get("auto_rate") and not autoprobe_done_emitted:
+                self.signals.autoprobe_done.emit()
             self.signals.all_finished.emit()
 
+    def _log(self, msg: str):
+        if self.parent_worker is not None:
+            self.parent_worker.log_message.emit(msg)
+
+    def _progress(self, msg: str):
+        if self.parent_worker is not None:
+            self.parent_worker.progress.emit(msg)
 
 class GroupTestWorker(QThread):
     finished_ok = pyqtSignal(list)
@@ -528,13 +603,14 @@ class GroupTestWorker(QThread):
     autoprobe_finished = pyqtSignal()
     log_message = pyqtSignal(str)
 
-    def __init__(self, endpoints: List[Tuple[EndpointRef, EndpointRef]], params: dict, group_name: str, dst_mac_override: str = None, dst_type: int = 0):
+    def __init__(self, endpoints: List[Tuple[EndpointRef, EndpointRef]], params: dict, group_name: str, dst_mac_override: str = None, dst_type: int = 0, port_speeds=None):
         super().__init__()
         self.endpoints = endpoints
         self.params = params
         self.group_name = group_name
         self.dst_mac_override = dst_mac_override
         self.dst_type = dst_type
+        self.port_speeds = port_speeds or {}
         self.results = []
         self.errors = []
         self.thread_pool = QThreadPool.globalInstance()
@@ -543,6 +619,9 @@ class GroupTestWorker(QThread):
         self.lock = threading.Lock()
         self._stop_requested = False
         self.runnables = []
+        self.autoprobe_pending = len(endpoints) if params.get("auto_rate") else 0
+        self.autoprobe_lock = threading.Lock()
+        self._autoprobe_finished_emitted = False
 
     def stop(self):
         self._stop_requested = True
@@ -581,35 +660,37 @@ class GroupTestWorker(QThread):
             # Для фиксированной скорости тоже блокируем кнопку,
             # но разблокируем сразу после запуска тестов
             self.autoprobe_started.emit()
+            self._autoprobe_finished_emitted = True
             self.autoprobe_finished.emit()
 
         for idx, (sender, receiver) in enumerate(self.endpoints, 1):
+            speed = self.port_speeds.get((sender.slave, sender.iface))
             runnable = GroupTestRunnable(
                 sender, receiver, self.params,
                 self.group_name, idx, self.pending_tests,
                 dst_mac_override=self.dst_mac_override,
-                dst_type=self.dst_type
+                dst_type=self.dst_type,
+                port_speed_mbps=speed,
+                parent_worker=self,
             )
             runnable.signals.finished.connect(self.on_test_finished)
             runnable.signals.error.connect(self.on_test_error)
             runnable.signals.all_finished.connect(self.on_test_completed)
             runnable.signals.progress.connect(self.progress.emit)
             runnable.signals.log_message.connect(self.log_message.emit)
+            runnable.signals.autoprobe_done.connect(self.on_autoprobe_done)
             self.runnables.append(runnable)
             self.thread_pool.start(runnable)
 
-        # Если автоподбор был, разблокируем после завершения всех runnables
-        if self.params.get("auto_rate"):
-            # Ждём завершения
-            loop = QEventLoop()
-            self.finished_ok.connect(loop.quit)
-            self.finished_err.connect(loop.quit)
-            QTimer.singleShot(300000, loop.quit)
-            loop.exec()
-            self.autoprobe_finished.emit()
-        else:
-            # Для фиксированной скорости уже разблокировали
-            pass
+    def on_autoprobe_done(self):
+        """Вызывается, когда очередной runnable закончил автоподбор."""
+        with self.autoprobe_lock:
+            if self._autoprobe_finished_emitted or not self.params.get("auto_rate"):
+                return
+            self.autoprobe_pending -= 1
+            if self.autoprobe_pending <= 0:
+                self._autoprobe_finished_emitted = True
+                self.autoprobe_finished.emit()
 
     def on_test_finished(self, result):
         with self.lock:
@@ -778,11 +859,15 @@ class MulticastGroupTestWorker(QThread):
 
             # 3. Ждём завершения всех sender'ов
             max_wait = 120.0
+            effective_pps = rate_to_use
+            if actual_pps_min and actual_pps_min > 0:
+                effective_pps = actual_pps_min
+
             if self.params.get("packet_count", 0):
-                theoretical_time = self.params["packet_count"] / max(self.params["rate_pps"], 1)
-                max_wait = theoretical_time * 1.2 + 60.0  # 20% запас + 60 секунд
+                theoretical_time = self.params["packet_count"] / max(effective_pps, 1)
+                max_wait = theoretical_time * 1.5 + 60.0
             else:
-                max_wait = self.params.get("duration_s", 5.0) * 1.2 + 60.0
+                max_wait = self.params.get("duration_s", 5.0) * 1.5 + 60.0
 
             # Собираем TX статистику для каждого sender'а
             sender_tx_results = {}  # mac -> tx_stats
@@ -929,7 +1014,7 @@ class MulticastMasterWorker(QThread):
     autoprobe_finished = pyqtSignal()
     log_message = pyqtSignal(str)
 
-    def __init__(self, vlan_to_interfaces: Dict[int, List[EndpointRef]], params: dict, dst_type: int, group_name: str = "", is_probe: bool = False):
+    def __init__(self, vlan_to_interfaces: Dict[int, List[EndpointRef]], params: dict, dst_type: int, group_name: str = "", is_probe: bool = False, port_speeds=None):
         super().__init__()
         self.vlan_to_interfaces = vlan_to_interfaces
         self.params = params
@@ -941,6 +1026,7 @@ class MulticastMasterWorker(QThread):
         self.errors = []
         self.clients = {}
         self.receiver_test_ids = {}
+        self.port_speeds = port_speeds or {}
 
         # Собираем все уникальные интерфейсы для sender'ов
         self.all_senders = []
@@ -961,6 +1047,14 @@ class MulticastMasterWorker(QThread):
         self.total_tests = len(self.all_receivers)
         self.test_index_counter = 0
 
+    def _min_sender_speed(self):
+        speeds = []
+        for ep in self.all_senders:
+            s = self.port_speeds.get((ep.slave, ep.iface))
+            if s is not None and s > 0:
+                speeds.append(float(s))
+        return min(speeds) if speeds else None
+    
     def stop(self):
         """Останавливает multicast тест."""
         self._stop_requested = True
@@ -1028,7 +1122,8 @@ class MulticastMasterWorker(QThread):
             params=temp_params,
             dst_type=self.dst_type,
             group_name=f"__probe_{rate_pps}__",
-            is_probe=True
+            is_probe=True,
+            port_speeds=self.port_speeds,
         )
         # Передаём клиентов, чтобы не создавать новые подключения
         temp_worker.clients = self.clients
@@ -1051,15 +1146,39 @@ class MulticastMasterWorker(QThread):
         # Собираем результаты
         total_sent = 0
         total_lost = 0
+        per_sender_pps = {}
         for result in temp_worker.results:
             total_sent += result["sender"].get("packets_sent", 0)
             total_lost += result["receiver"].get("packets_lost", 0)
+            sr = result.get("_sender_results", {})
+            for mac, info in sr.items():
+                if mac in per_sender_pps:
+                    continue   # уже посчитали для этого sender'а
+                sent = info.get("packets_sent", 0)
+                dur = info.get("duration_s", 0)
+                if sent > 0 and dur > 0:
+                    per_sender_pps[mac] = sent / dur
 
-        self._probe_worker = None
+        actual_pps_min = min(per_sender_pps.values()) if per_sender_pps else None
+        actual_pps_avg = (sum(per_sender_pps.values()) / len(per_sender_pps)
+                        if per_sender_pps else None)
 
-        print(f"DEBUG: _run_probe_test() результат: sent={total_sent}, lost={total_lost}")
-        return {"packets_sent": total_sent, "packets_lost": total_lost}
-    
+        print(f"DEBUG: _run_probe_test() результат: "
+            f"sent={total_sent}, lost={total_lost}, "
+            f"per_sender_pps={per_sender_pps}, "
+            f"min={actual_pps_min}, avg={actual_pps_avg}", flush=True)
+
+        return {
+            "packets_sent": total_sent,
+            "packets_lost": total_lost,
+            "actual_pps_min": actual_pps_min,
+            "actual_pps_avg": actual_pps_avg,
+        }
+
+    def _estimate_seconds(self, rate_pps: float) -> float:
+        return estimate_multicast_duration(
+            self.params, rate_pps, self.all_senders, self.port_speeds
+        )
     def run(self):
         try:
             if self.is_probe:
@@ -1108,23 +1227,41 @@ class MulticastMasterWorker(QThread):
                             confirm_trials=2,
                         )
                         
-                        rate_to_use = search.rate_pps
+                        found_rate = search.rate_pps
+                        actual_pps_min = search.last_trial_result.get("actual_pps_min")
+                        actual_pps_avg = search.last_trial_result.get("actual_pps_avg")
+
+                        # Если pktgen фактически не выдал запрошенную скорость,
+                        # ограничиваем rate_to_use фактическим pps самого медленного sender'а.
+                        if actual_pps_min and actual_pps_min > 0 and actual_pps_min < found_rate:
+                            rate_to_use = int(actual_pps_min)
+                            #self.log_message.emit(
+                            #    f"ℹ️ pktgen не выдержал {found_rate} pps, "
+                            #    f"ограничиваем до фактического {rate_to_use} pps"
+                            #)
+                        else:
+                            rate_to_use = found_rate
+                            
                         auto_rate_result = True
 
                         # === РАСЧЕТ ВРЕМЕНИ ЗАВЕРШЕНИЯ ===
                         from datetime import datetime, timedelta
-
-                        if self.params.get("packet_count", 0) > 0:
-                            seconds = self.params["packet_count"] / max(rate_to_use, 1)
+                        packet_count = self.params.get("packet_count") or 0
+                        if packet_count > 0:
+                            seconds = packet_count / max(rate_to_use, 1)
                         else:
-                            seconds = self.params.get("duration_s", 5.0)
-
+                            seconds = float(self.params.get("duration_s", 5.0))
                         eta = datetime.now() + timedelta(seconds=seconds)
                         eta_str = eta.strftime("%H:%M:%S")
 
-                        # Вывод в лог через сигнал
-                        self.log_message.emit(f"✅ Найдена скорость для multicast: {rate_to_use} pps (за {search.iterations} итераций)")
-                        self.log_message.emit(f"⏳ Тест запущен, завершится в {eta_str}")
+                        self.progress.emit(
+                            f"✅ {rate_to_use} pps, ~{seconds:.1f} с, до {eta_str}"
+                        )
+                        
+                        msg = (f"✅ Multicast: {rate_to_use} pps за {search.iterations} итераций, ~{seconds:.1f} с, "
+                            f"завершится в {eta_str}")
+                        self.log_message.emit(msg)
+                        self.progress.emit(msg)
                 finally:
                     self.autoprobe_finished.emit()
                     
@@ -1192,12 +1329,13 @@ class MulticastMasterWorker(QThread):
                     self.errors.append(f"Ошибка запуска sender на {ep.slave}:{ep.iface}: {e}")
 
             # ===== 3. Ждём завершения всех sender'ов =====
-            max_wait = 120.0
-            if self.params.get("packet_count", 0):
-                theoretical_time = self.params["packet_count"] / max(self.params["rate_pps"], 1)
-                max_wait = theoretical_time * 1.2 + 60.0  # 20% запас + 60 секунд
+            packet_count = self.params.get("packet_count") or 0
+            if packet_count > 0:
+                # rate_to_use уже фактический pps (или найденный автоподбором)
+                theoretical_time = packet_count / max(rate_to_use, 1)
+                max_wait = theoretical_time * 1.5 + 60.0
             else:
-                max_wait = self.params.get("duration_s", 5.0) * 1.2 + 60.0
+                max_wait = float(self.params.get("duration_s", 5.0)) * 1.5 + 60.0
 
             # Собираем TX статистику для каждого sender'а
             sender_tx_results = {}  # mac -> tx_stats
@@ -1436,6 +1574,7 @@ class MainWindow(QMainWindow):
         self.results = []
         self.workers = []
         self.group_worker = None
+        self.multicast_worker = None
         self.groups = {}
         self.iface_status = {}
         self.agent_online = {}
@@ -2866,7 +3005,7 @@ class MainWindow(QMainWindow):
         except RuntimeError as e:
             QMessageBox.warning(self, "Внимание", str(e))
             return
-
+        speed = self._get_port_speed(sender.slave, sender.iface) 
         params = self._get_params_from_box(self.single_params_box)
         dst_type = params.pop("dst_type", 0)
         self.log_debug(f"🔍 on_run_single_clicked: dst_type = {dst_type}")
@@ -2886,7 +3025,12 @@ class MainWindow(QMainWindow):
             self.log_user(f"ℹ️ Общий VLAN: {common_vlan}")
 
         self.log_debug(f"🔧 Параметры одиночного теста: {params}")
-        eta = self._estimate_finish_time(params)
+        if params.get("packet_count", 0) > 0 and not params.get("auto_rate"):
+            est_seconds = estimate_test_duration(params, params["rate_pps"], speed)
+            eta = (datetime.now() + timedelta(seconds=est_seconds)).strftime("%H:%M:%S")
+        else:
+            eta = self._estimate_finish_time(params)
+
         self.log_user(
             f"▶️ Тест запущен: {sender.slave}:{sender.iface} → {receiver.slave}:{receiver.iface}, "
             f"ожидаемое завершение: {eta}"
@@ -2897,7 +3041,7 @@ class MainWindow(QMainWindow):
         self.test_status_label.setText("⏳ Тест выполняется...")
         self.test_status_label.setStyleSheet("color: #ffaa00; font-weight: bold;")
 
-        worker = TestWorker(sender, receiver, params, "single", dst_mac_override=dst_mac_override, dst_type=dst_type)
+        worker = TestWorker(sender, receiver, params, "single", dst_mac_override=dst_mac_override, dst_type=dst_type, port_speed_mbps=speed)
         worker.log_message.connect(self.log_user)
         worker.autoprobe_started.connect(lambda: self.stop_btn.setEnabled(False))
         worker.autoprobe_finished.connect(lambda: self.stop_btn.setEnabled(True))
@@ -2952,6 +3096,12 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Внимание", "В группе должно быть минимум 2 интерфейса")
             return
 
+        port_speeds = {}
+        for ep in endpoints:
+            s = self._get_port_speed(ep.slave, ep.iface)
+            if s is not None:
+                port_speeds[(ep.slave, ep.iface)] = s
+                
         down_members = [ep for ep in endpoints if not self.is_interface_up(ep.slave, ep.iface)]
         if down_members:
             names = ", ".join(f"{ep.slave}:{ep.iface}" for ep in down_members)
@@ -2997,7 +3147,8 @@ class MainWindow(QMainWindow):
                 vlan_to_interfaces=valid_vlans,
                 params=params,
                 dst_type=dst_type,
-                group_name=group_name
+                group_name=group_name,
+                port_speeds=port_speeds,
             )
             self.multicast_worker.log_message.connect(self.log_user)
             self.multicast_worker.autoprobe_started.connect(lambda: self.stop_group_btn.setEnabled(False))
@@ -3036,7 +3187,7 @@ class MainWindow(QMainWindow):
         self.group_status_label.setText("Запуск группы (параллельно)...")
         self.group_results_table.setRowCount(0)
 
-        self.group_worker = GroupTestWorker(pairs, params, group_name)
+        self.group_worker = GroupTestWorker(pairs, params, group_name, port_speeds=port_speeds,)
         self.group_worker.log_message.connect(self.log_user)
         self.group_worker.autoprobe_started.connect(lambda: self.stop_group_btn.setEnabled(False))
         self.group_worker.autoprobe_finished.connect(lambda: self.stop_group_btn.setEnabled(True))
@@ -3260,13 +3411,17 @@ class MainWindow(QMainWindow):
                 for stat in sender_stats:
                     mac = stat.get("mac", "")
                     tx_stats = sender_tx_stats.get(mac, {})
-                    # Находим имя sender'а
-                    sender_name = "unknown"
+                    sender_name = mac   # fallback — покажем хотя бы MAC
+
                     for ep in self.groups.get(group_name, []):
-                        if ep.mac == mac:
-                            sender_name = f"{ep.slave}:{ep.iface}"
+                        if isinstance(ep, tuple) and len(ep) == 2:
+                            ep_obj = self.get_actual_endpoint(ep[0], ep[1])
+                        else:
+                            ep_obj = ep
+                        if ep_obj.mac == mac:
+                            sender_name = f"{ep_obj.slave}:{ep_obj.iface}"
                             break
-                    
+
                     for field in error_fields:
                         value = tx_stats.get(field, 0)
                         if value:
@@ -3743,6 +3898,17 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------------
     # Вспомогательные
     # ------------------------------------------------------------------------
+    def _get_port_speed(self, slave: str, iface: str) -> Optional[float]:
+        info = self.iface_status.get((slave, iface), {})
+        speed = info.get("speed")
+        if speed is None:
+            return None
+        try:
+            v = float(speed)
+            return v if v > 0 else None
+        except (TypeError, ValueError):
+            return None
+        
     def _estimate_finish_time(self, params: dict) -> str:
         if params.get("auto_rate"):
             return "неизвестно (идёт автоподбор скорости)"

@@ -103,28 +103,36 @@ echo -e "${GREEN}✅ Рабочая директория: $(pwd)${NC}"
 # ============================================================
 # ШАГ 3: Установка Python зависимостей и создание venv
 # ============================================================
-echo -e "${BLUE}[3/8] Установка Python зависимостей и создание venv...${NC}"
-
-apt install -y python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtwebengine
-
-# Удаляем старый venv, если он принадлежит root
-if [ -d "venv" ]; then
-    rm -rf venv
-fi
-
-echo -e "${YELLOW}⚠️ Создание виртуального окружения от имени $USER_NAME...${NC}"
-sudo -u "$USER_NAME" python3 -m venv venv --system-site-packages
-chown -R "$USER_NAME":"$USER_NAME" venv
-
-# Устанавливаем pip-зависимости от имени пользователя
 if [ -f "requirements.txt" ]; then
     echo -e "${YELLOW}⚠️ Установка pip-зависимостей...${NC}"
-    sudo -u "$USER_NAME" ./venv/bin/pip install --upgrade pip
-    sudo -u "$USER_NAME" ./venv/bin/pip install -r requirements.txt
-fi
 
-chown -R "$USER_NAME":"$USER_NAME" venv
-echo -e "${GREEN}✅ Python зависимости установлены${NC}"
+    # Настраиваем pip на зеркало (если pypi.org недоступен)
+    # Это можно пропустить, если стандартный PyPI работает
+    sudo -u "$USER_NAME" ./venv/bin/pip config set global.index-url \
+        https://repo.huaweicloud.com/repository/pypi/simple/ 2>/dev/null || true
+    sudo -u "$USER_NAME" ./venv/bin/pip config set global.trusted-host \
+        repo.huaweicloud.com 2>/dev/null || true
+    sudo -u "$USER_NAME" ./venv/bin/pip config set global.timeout 60 2>/dev/null || true
+
+    # Пытаемся поставить через pip
+    if sudo -u "$USER_NAME" ./venv/bin/pip install --upgrade pip; then
+        if ! sudo -u "$USER_NAME" ./venv/bin/pip install -r requirements.txt; then
+            echo -e "${YELLOW}⚠️ pip install не удался. Пробуем через apt...${NC}"
+            apt install -y python3-serial || true
+        fi
+    else
+        echo -e "${YELLOW}⚠️ pip install не удался. Пробуем через apt...${NC}"
+        apt install -y python3-serial || true
+    fi
+
+    # Проверяем, что pyserial доступен из venv
+    if sudo -u "$USER_NAME" ./venv/bin/python3 -c "import serial" 2>/dev/null; then
+        echo -e "${GREEN}✅ pyserial доступен${NC}"
+    else
+        echo -e "${YELLOW}⚠️ pyserial не доступен. Установите вручную:${NC}"
+        echo -e "     sudo apt install python3-serial"
+    fi
+fi
 
 # ============================================================
 # ШАГ 4: Создание topology.json

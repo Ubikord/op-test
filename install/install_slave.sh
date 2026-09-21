@@ -45,17 +45,17 @@ echo -e "${GREEN}✅ SSH настроен (пароль включен)${NC}"
 # ============================================================
 # 3. Добавление публичного ключа (если передан)
 # ============================================================
-if [ -f "/tmp/authorized_keys" ]; then
-    echo -e "${BLUE}[2/7] Добавление публичного ключа...${NC}"
-    mkdir -p /root/.ssh
-    cat /tmp/authorized_keys >> /root/.ssh/authorized_keys
-    chmod 600 /root/.ssh/authorized_keys
-    chmod 700 /root/.ssh
-    echo -e "${GREEN}✅ Публичный ключ добавлен${NC}"
-else
-    echo -e "${YELLOW}⚠️ Публичный ключ не передан (файл /tmp/authorized_keys отсутствует)${NC}"
-    echo -e "${YELLOW}   Добавьте ключ вручную: ssh-copy-id root@192.168.2.${DEVICE_NUMBER}${NC}"
-fi
+#if [ -f "/tmp/authorized_keys" ]; then
+#    echo -e "${BLUE}[2/7] Добавление публичного ключа...${NC}"
+#    mkdir -p /root/.ssh
+#    cat /tmp/authorized_keys >> /root/.ssh/authorized_keys
+#    chmod 600 /root/.ssh/authorized_keys
+#    chmod 700 /root/.ssh
+#    echo -e "${GREEN}✅ Публичный ключ добавлен${NC}"
+#else
+#    echo -e "${YELLOW}⚠️ Публичный ключ не передан (файл /tmp/authorized_keys отсутствует)${NC}"
+#    echo -e "${YELLOW}   Добавьте ключ вручную: ssh-copy-id root@192.168.2.${DEVICE_NUMBER}${NC}"
+#fi
 
 # ============================================================
 # 4. Настройка имени устройства (просто номер)
@@ -218,9 +218,6 @@ echo -e "     eth2: 10.0.0.${DEVICE_NUMBER}2"
 echo -e "     eth3: 10.0.0.${DEVICE_NUMBER}3"
 echo -e "   Рабочая папка: /root/op-test"
 echo -e "   Файлы: agent.py, protocol.py, pktgen, config.json, clean_network.sh"
-echo ""
-echo -e "${YELLOW}⚠️ Управляющий IP настройте вручную через Luci:${NC}"
-echo -e "   Network → Interfaces → LAN → IPv4 адрес: 192.168.2.${DEVICE_NUMBER}"
 echo ""
 echo -e "${YELLOW}⚠️ Если ключ не был добавлен автоматически:${NC}"
 echo -e "   ssh-copy-id root@192.168.2.${DEVICE_NUMBER}"

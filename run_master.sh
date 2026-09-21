@@ -5,19 +5,29 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "Запуск OP-Test из: ${SCRIPT_DIR}"
 
-# Активация виртуального окружения
-if [ -f "${SCRIPT_DIR}/venv/bin/activate" ]; then
+# Проверяем venv
+VENV_DIR="${SCRIPT_DIR}/venv"
+if [ -f "${VENV_DIR}/bin/activate" ]; then
+    if [ ! -w "${VENV_DIR}" ]; then
+        echo "❌ Папка venv принадлежит другому пользователю."
+        echo "   Запустите установку от вашего пользователя или:"
+        echo "     sudo chown -R \$(whoami):\$(whoami) ${VENV_DIR}"
+        exit 1
+    fi
     echo "Активация venv..."
-    source "${SCRIPT_DIR}/venv/bin/activate"
+    source "${VENV_DIR}/bin/activate"
 else
     echo "⚠️ venv не найден, создаем..."
     cd "${SCRIPT_DIR}"
     python3 -m venv venv --system-site-packages
     source venv/bin/activate
-    pip install -r requirements.txt
+    pip install --upgrade pip
+    if [ -f requirements.txt ]; then
+        pip install -r requirements.txt
+    fi
 fi
 
-# Проверяем наличие topology.json
+# Проверяем topology.json
 if [ ! -f "${SCRIPT_DIR}/config/topology.json" ]; then
     echo "⚠️ config/topology.json не найден, создаем шаблон..."
     mkdir -p "${SCRIPT_DIR}/config"
@@ -39,5 +49,5 @@ JSON
     echo -e "\033[32m✅ topology.json создан\033[0m"
 fi
 
-# Запускаем GUI
-python3 "${SCRIPT_DIR}/run_gui.py" "${SCRIPT_DIR}/config/topology.json"
+# Запускаем GUI из venv
+exec python3 "${SCRIPT_DIR}/run_gui.py" "${SCRIPT_DIR}/config/topology.json"

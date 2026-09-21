@@ -45,6 +45,14 @@ apt install -y python3 python3-pip python3-venv python3.10-venv \
     python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtwebengine \
     git sshpass
 
+echo -e "${BLUE}🌍 Установка часового пояса Europe/Moscow...${NC}"
+if command -v timedatectl >/dev/null 2>&1; then
+    timedatectl set-timezone Europe/Moscow 2>/dev/null || \
+        ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime
+else
+    ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime
+fi
+
 echo -e "${GREEN}✅ Python и зависимости установлены${NC}"
 
 # ============================================================

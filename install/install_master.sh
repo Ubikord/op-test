@@ -264,19 +264,27 @@ echo -e "${GREEN}✅ run_master.sh создан${NC}"
 # ============================================================
 # ШАГ 8: Создание ярлыков
 # ============================================================
+echo -e "${BLUE}[8/8] Создание ярлыков...${NC}"
+
+# 1. Ярлык в меню
 cat > /usr/share/applications/op-test.desktop << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
 Name=OP-Test
 Comment=Тестирование коммутаторов
-Exec=bash ${PROJECT_DIR}/run_master.sh
+Exec=python3 ${PROJECT_DIR}/run_gui.py ${PROJECT_DIR}/config/topology.json
 Icon=${PROJECT_DIR}/icon.png
 Terminal=false
 Categories=Network;
 StartupNotify=true
-Path=${PROJECT_DIR}
 EOF
+
+# 2. Ярлык на рабочем столе
+DESKTOP_DIR="$USER_HOME/Desktop"
+if [ ! -d "$DESKTOP_DIR" ]; then
+    DESKTOP_DIR="/root/Desktop"
+fi
 
 if [ -d "$DESKTOP_DIR" ]; then
     cat > "$DESKTOP_DIR/op-test.desktop" << EOF
@@ -285,17 +293,35 @@ Version=1.0
 Type=Application
 Name=OP-Test
 Comment=Тестирование коммутаторов
-Exec=bash ${PROJECT_DIR}/run_master.sh
+Exec=python3 ${PROJECT_DIR}/run_gui.py ${PROJECT_DIR}/config/topology.json
 Icon=${PROJECT_DIR}/icon.png
 Terminal=false
 Categories=Network;
 StartupNotify=true
-Path=${PROJECT_DIR}
 EOF
     chown "$USER_NAME":"$USER_NAME" "$DESKTOP_DIR/op-test.desktop" 2>/dev/null || true
     chmod +x "$DESKTOP_DIR/op-test.desktop"
     echo -e "${GREEN}✅ Ярлык создан на рабочем столе${NC}"
+else
+    echo -e "${YELLOW}⚠️ Папка Desktop не найдена${NC}"
 fi
+
+# 3. Обновление кэша
+update-desktop-database /usr/share/applications/ 2>/dev/null || true
+update-menus 2>/dev/null || true
+
+# 4. Создание иконки (если нет)
+if [ ! -f "${PROJECT_DIR}/icon.png" ]; then
+    if command -v convert >/dev/null 2>&1; then
+        convert -size 64x64 xc:blue -fill white -font /usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf -pointsize 24 -gravity center -annotate 0 "OP" "${PROJECT_DIR}/icon.png" 2>/dev/null || true
+    fi
+    if [ ! -f "${PROJECT_DIR}/icon.png" ]; then
+        cp /usr/share/icons/hicolor/64x64/apps/network.png "${PROJECT_DIR}/icon.png" 2>/dev/null || true
+    fi
+    chown "$USER_NAME":"$USER_NAME" "${PROJECT_DIR}/icon.png" 2>/dev/null || true
+fi
+
+echo -e "${GREEN}✅ Ярлыки созданы${NC}"
 
 # ============================================================
 # ЗАВЕРШЕНИЕ

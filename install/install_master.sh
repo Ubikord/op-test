@@ -41,7 +41,9 @@ echo -e "${GREEN}✅ Папка проекта: $PROJECT_DIR${NC}"
 echo -e "${BLUE}[1/8] Установка Python и зависимостей...${NC}"
 
 apt update
-apt install -y python3 python3-pip python3-pyqt5 python3-pyqt5.qtsvg git sshpass
+apt install -y python3 python3-pip python3-venv python3.10-venv \
+    python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtwebengine \
+    git sshpass
 
 echo -e "${GREEN}✅ Python и зависимости установлены${NC}"
 
@@ -101,26 +103,27 @@ echo -e "${GREEN}✅ Рабочая директория: $(pwd)${NC}"
 # ============================================================
 # ШАГ 3: Установка Python зависимостей и создание venv
 # ============================================================
-echo -e "${BLUE}[3/8] Установка Python зависимостей...${NC}"
+echo -e "${BLUE}[3/8] Установка Python зависимостей и создание venv...${NC}"
 
-# Устанавливаем PyQt5 глобально (для надежности)
 apt install -y python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtwebengine
 
-# Создаем venv с доступом к системным пакетам
-if [ ! -d "venv" ]; then
-    echo -e "${YELLOW}⚠️ Создание виртуального окружения...${NC}"
-    python3 -m venv venv --system-site-packages
-    echo -e "${GREEN}✅ venv создан с доступом к системным пакетам${NC}"
+# Удаляем старый venv, если он принадлежит root
+if [ -d "venv" ]; then
+    rm -rf venv
 fi
 
-# Активируем venv и устанавливаем pip-зависимости
-source venv/bin/activate
-pip install --upgrade pip
+echo -e "${YELLOW}⚠️ Создание виртуального окружения от имени $USER_NAME...${NC}"
+sudo -u "$USER_NAME" python3 -m venv venv --system-site-packages
+chown -R "$USER_NAME":"$USER_NAME" venv
+
+# Устанавливаем pip-зависимости от имени пользователя
 if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt
+    echo -e "${YELLOW}⚠️ Установка pip-зависимостей...${NC}"
+    sudo -u "$USER_NAME" ./venv/bin/pip install --upgrade pip
+    sudo -u "$USER_NAME" ./venv/bin/pip install -r requirements.txt
 fi
-deactivate
 
+chown -R "$USER_NAME":"$USER_NAME" venv
 echo -e "${GREEN}✅ Python зависимости установлены${NC}"
 
 # ============================================================
@@ -261,27 +264,19 @@ echo -e "${GREEN}✅ run_master.sh создан${NC}"
 # ============================================================
 # ШАГ 8: Создание ярлыков
 # ============================================================
-echo -e "${BLUE}[8/8] Создание ярлыков...${NC}"
-
-# 1. Ярлык в меню
 cat > /usr/share/applications/op-test.desktop << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
 Name=OP-Test
 Comment=Тестирование коммутаторов
-Exec=python3 ${PROJECT_DIR}/run_gui.py ${PROJECT_DIR}/config/topology.json
+Exec=bash ${PROJECT_DIR}/run_master.sh
 Icon=${PROJECT_DIR}/icon.png
 Terminal=false
 Categories=Network;
 StartupNotify=true
+Path=${PROJECT_DIR}
 EOF
-
-# 2. Ярлык на рабочем столе
-DESKTOP_DIR="$USER_HOME/Desktop"
-if [ ! -d "$DESKTOP_DIR" ]; then
-    DESKTOP_DIR="/root/Desktop"
-fi
 
 if [ -d "$DESKTOP_DIR" ]; then
     cat > "$DESKTOP_DIR/op-test.desktop" << EOF
@@ -290,35 +285,17 @@ Version=1.0
 Type=Application
 Name=OP-Test
 Comment=Тестирование коммутаторов
-Exec=python3 ${PROJECT_DIR}/run_gui.py ${PROJECT_DIR}/config/topology.json
+Exec=bash ${PROJECT_DIR}/run_master.sh
 Icon=${PROJECT_DIR}/icon.png
 Terminal=false
 Categories=Network;
 StartupNotify=true
+Path=${PROJECT_DIR}
 EOF
     chown "$USER_NAME":"$USER_NAME" "$DESKTOP_DIR/op-test.desktop" 2>/dev/null || true
     chmod +x "$DESKTOP_DIR/op-test.desktop"
     echo -e "${GREEN}✅ Ярлык создан на рабочем столе${NC}"
-else
-    echo -e "${YELLOW}⚠️ Папка Desktop не найдена${NC}"
 fi
-
-# 3. Обновление кэша
-update-desktop-database /usr/share/applications/ 2>/dev/null || true
-update-menus 2>/dev/null || true
-
-# 4. Создание иконки (если нет)
-if [ ! -f "${PROJECT_DIR}/icon.png" ]; then
-    if command -v convert >/dev/null 2>&1; then
-        convert -size 64x64 xc:blue -fill white -font /usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf -pointsize 24 -gravity center -annotate 0 "OP" "${PROJECT_DIR}/icon.png" 2>/dev/null || true
-    fi
-    if [ ! -f "${PROJECT_DIR}/icon.png" ]; then
-        cp /usr/share/icons/hicolor/64x64/apps/network.png "${PROJECT_DIR}/icon.png" 2>/dev/null || true
-    fi
-    chown "$USER_NAME":"$USER_NAME" "${PROJECT_DIR}/icon.png" 2>/dev/null || true
-fi
-
-echo -e "${GREEN}✅ Ярлыки созданы${NC}"
 
 # ============================================================
 # ЗАВЕРШЕНИЕ
